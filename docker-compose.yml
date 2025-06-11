@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: ocikey_postgres
+    environment:
+      POSTGRES_DB: ocikey_db
+      POSTGRES_USER: OCI_user
+      POSTGRES_PASSWORD: petoci
+    ports:
+      - "5000:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ocikey_network
+
+  backend:
+    build: ./backend
+    container_name: ocikey_backend
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=ocikey_db
+      - DB_USER=OCI_user
+      - DB_PASSWORD=petoci
+      - JWT_SECRET=your_jwt_secret_key_here_change_in_production
+      - JWT_EXPIRES_IN=7d
+    depends_on:
+      - postgres
+    networks:
+      - ocikey_network
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+volumes:
+  postgres_data:
+
+networks:
+  ocikey_network:
+    driver: bridge
