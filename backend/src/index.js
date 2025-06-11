@@ -1,10 +1,12 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { register, login, getProfile, logout } from './controllers/authController.js';
+import { register, login, getProfile, logout, logoutAll, refreshToken } from './controllers/authController.js';
 import { authenticateToken, requireRole } from './middleware/auth.js';
+import { apiRateLimiter, loginRateLimiter, registerRateLimiter } from './middleware/rateLimiter.js';
 import { validateRegistration, validateLogin } from './utils/validation.js';
 import { successResponse, errorResponse, responses } from './utils/response.js';
+import cleanupService from './services/cleanupService.js';
 
 // Carrega variáveis de ambiente do arquivo .env
 dotenv.config();
@@ -17,6 +19,7 @@ const PORT = process.env.PORT || 3001;
 app.use(cors()); // Habilita CORS para todas as rotas
 app.use(express.json()); // Parser para JSON
 app.use(express.urlencoded({ extended: true })); // Parser para dados de formulário
+app.use(apiRateLimiter); // Rate limiting geral para todas as rotas
 
 /*
  Endpoint de verificação de saúde do servidor
@@ -33,10 +36,12 @@ app.get('/health', (req, res) => {
  Rotas de autenticação
  Todas as rotas relacionadas ao sistema de login/registro
 */
-app.post('/api/auth/register', validateRegistration, register); // Registro com validação
-app.post('/api/auth/login', validateLogin, login); // Login com validação
+app.post('/api/auth/register', registerRateLimiter, validateRegistration, register); // Registro com rate limiting
+app.post('/api/auth/login', loginRateLimiter, validateLogin, login); // Login com rate limiting
 app.get('/api/auth/profile', authenticateToken, getProfile); // Perfil protegido por token
-app.post('/api/auth/logout', logout); // Logout (lado cliente, vou ver isso)
+app.post('/api/auth/logout', authenticateToken, logout); // Logout seguro no backend
+app.post('/api/auth/logout-all', authenticateToken, logoutAll); // Logout de todas as sessões
+app.post('/api/auth/refresh', authenticateToken, refreshToken); // Renovação de token
 
 /*
   Rotas protegidas por autenticação e role
@@ -80,4 +85,20 @@ app.listen(PORT, () => {
   console.log(`Servidor OCIKey Backend rodando na porta ${PORT}`);
   console.log(`Verificação de saúde: http://localhost:${PORT}/health`);
   console.log(`Endpoints de autenticação disponíveis em: http://localhost:${PORT}/api/auth/`);
+  
+  // Inicia o serviço de limpeza automática
+  cleanupService.start();
+  
+  // Graceful shutdown
+  process.on('SIGTERM', () => {
+    console.log('Recebido SIGTERM, encerrando servidor...');
+    cleanupService.stop();
+    process.exit(0);
+  });
+  
+  process.on('SIGINT', () => {
+    console.log('Recebido SIGINT, encerrando servidor...');
+    cleanupService.stop();
+    process.exit(0);
+  });
 });

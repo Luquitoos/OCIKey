@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import TokenBlacklist from '../models/TokenBlacklist.js';
 import { successResponse, errorResponse, responses } from '../utils/response.js';
 
 /*
@@ -118,9 +119,73 @@ export const getProfile = async (req, res) => {
 
 /*
  Controlador para logout do usuário
- Como usamos JWT, o logout é tratado no lado do cliente (ainda vou ver isso na integração)
- removendo o token do armazenamento local
+ Adiciona o token à blacklist para invalidação segura
 */
 export const logout = async (req, res) => {
-  res.json(successResponse(responses.LOGOUT_SUCCESS));
+  try {
+    const token = req.token;
+    const tokenPayload = req.tokenPayload;
+
+    if (token && tokenPayload) {
+      // Calcula a data de expiração do token
+      const expiresAt = new Date(tokenPayload.exp * 1000);
+      
+      // Adiciona o token à blacklist
+      await TokenBlacklist.addToken(token, expiresAt);
+    }
+
+    res.json(successResponse(responses.LOGOUT_SUCCESS));
+  } catch (error) {
+    console.error('Erro no logout:', error);
+    // Mesmo com erro, retorna sucesso para não expor informações
+    res.json(successResponse(responses.LOGOUT_SUCCESS));
+  }
+};
+
+/*
+ Controlador para logout de todas as sessões do usuário
+ Invalida todos os tokens ativos do usuário
+*/
+export const logoutAll = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Invalida todos os tokens do usuário
+    await TokenBlacklist.invalidateUserTokens(userId);
+
+    res.json(successResponse('Logout realizado em todas as sessões'));
+  } catch (error) {
+    console.error('Erro no logout geral:', error);
+    res.status(500).json(errorResponse(responses.INTERNAL_ERROR));
+  }
+};
+
+/*
+ Controlador para refresh do token
+ Gera um novo token e invalida o anterior
+*/
+export const refreshToken = async (req, res) => {
+  try {
+    const oldToken = req.token;
+    const tokenPayload = req.tokenPayload;
+    const user = req.user;
+
+    // Gera novo token
+    const newToken = generateToken(user.id);
+
+    // Adiciona o token antigo à blacklist
+    if (oldToken && tokenPayload) {
+      const expiresAt = new Date(tokenPayload.exp * 1000);
+      await TokenBlacklist.addToken(oldToken, expiresAt);
+    }
+
+    res.json(successResponse('Token renovado com sucesso', {
+      user: createUserResponse(user),
+      token: newToken
+    }));
+
+  } catch (error) {
+    console.error('Erro ao renovar token:', error);
+    res.status(500).json(errorResponse(responses.INTERNAL_ERROR));
+  }
 };

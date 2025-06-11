@@ -1,14 +1,14 @@
 import { createPool } from './database-config.js';
 
 /* Script de configuração inicial do banco de dados
-Cria todas as tabelas necessárias para o sistema de controle de gabaritos */
+Cria apenas as tabelas necessárias para o sistema de login */
 
 // Pool específico para setup (será fechado após uso)
 const pool = createPool();
 
 /*
   Função principal para criação das tabelas do banco
-  Executa todas as queries DDL necessárias para inicializar o sistema
+  Executa todas as queries DDL necessárias para o sistema de login
 */
 const createTables = async () => {
   try {
@@ -27,68 +27,33 @@ const createTables = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
     /*
-     Tabela de escolas (mantida para compatibilidade futura)
-     Pode ser usada para normalização dos dados de escola
+     Tabela de blacklist de tokens JWT
+     Armazena tokens invalidados para logout seguro
     */
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS schools (
+      CREATE TABLE IF NOT EXISTS token_blacklist (
         id SERIAL PRIMARY KEY,
-        name VARCHAR(100) NOT NULL,
-        address TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        token TEXT UNIQUE NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
     /*
-     Tabela de alunos/participantes
-     Armazena dados dos participantes das provas
-     Campos correspondem ao formato CSV: id, nome, escola
+     Tabela para rate limiting
+     Controla tentativas de acesso por IP
     */
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS alunos (
+      CREATE TABLE IF NOT EXISTS rate_limit_attempts (
         id SERIAL PRIMARY KEY,
-        nome VARCHAR(100) NOT NULL,
-        escola VARCHAR(100) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        key VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    /*
-     Tabela de provas
-     Armazena gabaritos das provas
-     Campos correspondem ao formato CSV: Prova, Gabarito
-    */
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS provas (
-        id SERIAL PRIMARY KEY,
-        prova VARCHAR(100) NOT NULL,
-        gabarito TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    /*
-     Tabela de leituras de gabaritos
-     Armazena resultados do processamento das imagens
-     Campos correspondem ao exemplo de output:
-     arquivo, erro, id_prova, id_aluno, gabarito, acertos, nota
-    */
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS leituras (
-        id SERIAL PRIMARY KEY,
-        arquivo VARCHAR(255) NOT NULL,
-        erro INTEGER DEFAULT 0,
-        id_prova INTEGER REFERENCES provas(id) ON DELETE CASCADE,
-        id_aluno INTEGER REFERENCES alunos(id) ON DELETE SET NULL,
-        gabarito TEXT,
-        acertos VARCHAR(10),
-        nota DECIMAL(5,2) DEFAULT 0.00,
-        processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
+
     /*
      Criação de índices para otimização de performance
      Melhora velocidade de consultas em campos frequentemente pesquisados
@@ -96,13 +61,16 @@ const createTables = async () => {
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
       CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
-      CREATE INDEX IF NOT EXISTS idx_leituras_id_prova ON leituras(id_prova);
-      CREATE INDEX IF NOT EXISTS idx_leituras_id_aluno ON leituras(id_aluno);
+      CREATE INDEX IF NOT EXISTS idx_token_blacklist_token ON token_blacklist(token);
+      CREATE INDEX IF NOT EXISTS idx_token_blacklist_expires ON token_blacklist(expires_at);
+      CREATE INDEX IF NOT EXISTS idx_rate_limit_key ON rate_limit_attempts(key);
+      CREATE INDEX IF NOT EXISTS idx_rate_limit_created ON rate_limit_attempts(created_at);
     `);
+    
     console.log('Configuração do Banco de Dados feita');
   } catch (error) {
     console.error('Erro ao configurar Banco de Dados:', error);
-    throw error; // Repassa o erro para tratamento externo
+    throw error;
   } finally {
     // Fecha o pool após uso para evitar conexões pendentes
     await pool.end();
@@ -116,9 +84,9 @@ const createTables = async () => {
 createTables()
   .then(() => {
     console.log('Inicialização do banco de dados finalizada');
-    process.exit(0); // Sai com código de sucesso
+    process.exit(0);
   })
   .catch((error) => {
     console.error('Falha na inicialização do banco de dados:', error);
-    process.exit(1); // Sai com código de erro
+    process.exit(1);
   });

@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import TokenBlacklist from '../models/TokenBlacklist.js';
 import { errorResponse, responses } from '../utils/response.js';
 
 /*
@@ -18,6 +19,12 @@ export const authenticateToken = async (req, res, next) => {
   }
 
   try {
+    // Verifica se o token está na blacklist
+    const isBlacklisted = await TokenBlacklist.isTokenBlacklisted(token);
+    if (isBlacklisted) {
+      return res.status(401).json(errorResponse('Token foi invalidado'));
+    }
+
     // Verifica e decodifica o token JWT
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
@@ -29,8 +36,10 @@ export const authenticateToken = async (req, res, next) => {
       return res.status(401).json(errorResponse(responses.TOKEN_INVALID));
     }
 
-    // Adiciona o usuário ao objeto request para uso nos próximos middlewares
+    // Adiciona o usuário e token ao objeto request para uso nos próximos middlewares
     req.user = user;
+    req.token = token;
+    req.tokenPayload = decoded;
     next(); // Continua para o próximo middleware
   } catch (error) {
     // Token inválido ou expirado
