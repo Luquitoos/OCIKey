@@ -22,7 +22,7 @@ services:
       - "3001:3001"
     environment:
       - NODE_ENV=development
-      - DB_HOST=postgres
+      - DB_HOST=localhost
       - DB_PORT=5000
       - DB_NAME=ocikey_db
       - DB_USER=OCI_user
