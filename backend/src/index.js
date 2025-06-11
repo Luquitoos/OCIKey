@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import { apiRateLimiter } from './middleware/rateLimiter.js';
 import { successResponse, errorResponse, responses } from './utils/response.js';
 import cleanupService from './services/cleanupService.js';
-import apiRoutes from './routes/index.js';
+import apiRoutes from './routes/routes.js';
 
 // Carrega variáveis de ambiente do arquivo .env
 dotenv.config();
