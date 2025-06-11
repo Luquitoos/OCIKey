@@ -1,15 +1,15 @@
 import Joi from 'joi';
 import { errorResponse, responses } from './response.js';
 
-/**
- * Utilitários de validação usando Joi
- * Define schemas reutilizáveis e middleware de validação
- */
+/*
+ Utilitários de validação usando Joi
+ Define schemas reutilizáveis e middleware de validação
+*/
 
-/**
- * Campo de email reutilizável com validações padrão
- * Valida formato de email e obrigatoriedade
- */
+/*
+ Campo de email reutilizável com validações padrão
+ Valida formato de email e obrigatoriedade
+*/
 const emailField = Joi.string()
   .email() // Valida formato de email
   .required() // Campo obrigatório
@@ -18,9 +18,9 @@ const emailField = Joi.string()
     'any.required': 'Email é obrigatório'
   });
 
-/**
- * Campo de senha reutilizável com validações padrão
- * Valida tamanho mínimo e obrigatoriedade
+/*
+ Campo de senha reutilizável com validações padrão
+ Valida tamanho mínimo e obrigatoriedade
  */
 const passwordField = Joi.string()
   .min(6) // Mínimo 6 caracteres
@@ -30,9 +30,9 @@ const passwordField = Joi.string()
     'any.required': 'Senha é obrigatória'
   });
 
-/**
- * Campo de nome de usuário reutilizável com validações padrão
- * Valida caracteres alfanuméricos, tamanho e obrigatoriedade
+/*
+ Campo de nome de usuário reutilizável com validações padrão
+ Valida caracteres alfanuméricos, tamanho e obrigatoriedade
  */
 const usernameField = Joi.string()
   .alphanum() // Apenas caracteres alfanuméricos
@@ -46,18 +46,18 @@ const usernameField = Joi.string()
     'any.required': 'Nome de usuário é obrigatório'
   });
 
-/**
- * Campo de role reutilizável com valores válidos
- * Define roles permitidas no sistema
- */
+/*
+ Campo de role reutilizável com valores válidos
+ Define roles permitidas no sistema
+*/
 const roleField = Joi.string()
   .valid('user', 'admin', 'teacher') // Valores permitidos
   .default('user'); // Valor padrão
 
-/**
- * Schema de validação para registro de usuário
- * Combina todos os campos necessários para criar um usuário
- */
+/*
+ Schema de validação para registro de usuário
+ Combina todos os campos necessários para criar um usuário
+*/
 export const registerSchema = Joi.object({
   username: usernameField,
   email: emailField,
@@ -65,10 +65,10 @@ export const registerSchema = Joi.object({
   role: roleField
 });
 
-/**
- * Schema de validação para login de usuário
- * Apenas email e senha são necessários
- */
+/*
+ Schema de validação para login de usuário
+ Apenas email e senha são necessários
+*/
 export const loginSchema = Joi.object({
   email: emailField,
   password: Joi.string().required().messages({
@@ -76,12 +76,11 @@ export const loginSchema = Joi.object({
   })
 });
 
-/**
- * Middleware genérico de validação
- * Valida o body da requisição contra um schema Joi
- * @param {Object} schema - Schema Joi para validação
- * @returns {Function} Middleware function
- */
+/*
+ Middleware genérico de validação
+ Valida o body da requisição contra um schema Joi
+ schema - Schema Joi para validação
+*/
 export const validateRequest = (schema) => {
   return (req, res, next) => {
     // Valida o body da requisição contra o schema
@@ -103,14 +102,14 @@ export const validateRequest = (schema) => {
   };
 };
 
-/**
- * Middleware específico para validação de registro
- * Aplica o schema de registro ao body da requisição
- */
+/*
+ Middleware específico para validação de registro
+ Aplica o schema de registro ao body da requisição
+*/
 export const validateRegistration = validateRequest(registerSchema);
 
-/**
- * Middleware específico para validação de login
- * Aplica o schema de login ao body da requisição
- */
+/*
+ Middleware específico para validação de login
+ Aplica o schema de login ao body da requisição
+*/
 export const validateLogin = validateRequest(loginSchema);

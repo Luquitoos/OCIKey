@@ -1,15 +1,15 @@
-/**
- * Utilitário para padronizar respostas da API
- * Garante consistência no formato de todas as respostas
- */
+/*
+ Utilitário para padronizar respostas da API
+ Garante consistência no formato de todas as respostas
+*/
 
-/**
- * Cria uma resposta padronizada da API
- * @param {boolean} success - Indica se a operação foi bem-sucedida
- * @param {string} message - Mensagem descritiva da resposta
- * @param {*} data - Dados a serem retornados (opcional)
- * @param {Array} errors - Array de erros (opcional)
- * @returns {Object} Objeto de resposta padronizado
+/*
+  Cria uma resposta padronizada da API
+  success - Indica se a operação foi bem-sucedida
+  message - Mensagem descritiva da resposta
+  data - Dados a serem retornados (opcional)
+  errors - Array de erros (opcional)
+  Objeto de resposta padronizado
  */
 export const createResponse = (success, message, data = null, errors = null) => {
   const response = { success, message };
@@ -27,30 +27,30 @@ export const createResponse = (success, message, data = null, errors = null) => 
   return response;
 };
 
-/**
- * Cria uma resposta de sucesso
- * @param {string} message - Mensagem de sucesso
- * @param {*} data - Dados a serem retornados (opcional)
- * @returns {Object} Resposta de sucesso padronizada
- */
+/*
+ Cria uma resposta de sucesso
+ message - Mensagem de sucesso
+ data - Dados a serem retornados (opcional)
+ Resposta de sucesso padronizada
+*/
 export const successResponse = (message, data = null) => {
   return createResponse(true, message, data);
 };
 
-/**
- * Cria uma resposta de erro
- * @param {string} message - Mensagem de erro
- * @param {Array} errors - Array de erros detalhados (opcional)
- * @returns {Object} Resposta de erro padronizada
- */
+/*
+ Cria uma resposta de erro
+ message - Mensagem de erro
+ errors - Array de erros detalhados (opcional)
+ Resposta de erro padronizada
+*/
 export const errorResponse = (message, errors = null) => {
   return createResponse(false, message, null, errors);
 };
 
-/**
- * Constantes de mensagens padronizadas
- * Centraliza todas as mensagens da aplicação para facilitar manutenção
- */
+/*
+ Constantes de mensagens padronizadas
+ Centraliza todas as mensagens da aplicação para facilitar manutenção
+*/
 export const responses = {
   // Mensagens de autenticação
   INVALID_CREDENTIALS: 'Email ou senha inválidos',
