@@ -1,12 +1,10 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { register, login, getProfile, logout, logoutAll, refreshToken } from './controllers/authController.js';
-import { authenticateToken, requireRole } from './middleware/auth.js';
-import { apiRateLimiter, loginRateLimiter, registerRateLimiter } from './middleware/rateLimiter.js';
-import { validateRegistration, validateLogin } from './utils/validation.js';
+import { apiRateLimiter } from './middleware/rateLimiter.js';
 import { successResponse, errorResponse, responses } from './utils/response.js';
 import cleanupService from './services/cleanupService.js';
+import apiRoutes from './routes/index.js';
 
 // Carrega variáveis de ambiente do arquivo .env
 dotenv.config();
@@ -33,29 +31,10 @@ app.get('/health', (req, res) => {
 });
 
 /*
- Rotas de autenticação
- Todas as rotas relacionadas ao sistema de login/registro
+ Configuração das rotas da API
+ Todas as rotas são organizadas em módulos separados
 */
-app.post('/api/auth/register', registerRateLimiter, validateRegistration, register); // Registro com rate limiting
-app.post('/api/auth/login', loginRateLimiter, validateLogin, login); // Login com rate limiting
-app.get('/api/auth/profile', authenticateToken, getProfile); // Perfil protegido por token
-app.post('/api/auth/logout', authenticateToken, logout); // Logout seguro no backend
-app.post('/api/auth/logout-all', authenticateToken, logoutAll); // Logout de todas as sessões
-app.post('/api/auth/refresh', authenticateToken, refreshToken); // Renovação de token
-
-/*
-  Rotas protegidas por autenticação e role
-  Exemplos de endpoints com diferentes níveis de acesso
-*/
-app.get('/api/admin/users', authenticateToken, requireRole(['admin']), (req, res) => {
-  // Rota exclusiva para administradores
-  res.json(successResponse('Rota exclusiva para admin - Lista de usuários'));
-});
-
-app.get('/api/teacher/dashboard', authenticateToken, requireRole(['admin', 'teacher']), (req, res) => {
-  // Rota para professores e administradores
-  res.json(successResponse('Dashboard do professor'));
-});
+app.use('/api', apiRoutes);
 
 /*
  Middleware global de tratamento de erros
