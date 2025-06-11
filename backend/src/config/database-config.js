@@ -36,3 +36,5 @@ export const createPool = (config = dbConfig) => {
 
   return pool; // Retorna o pool configurado
 };
+
+export const pool = createPool(); // Exporta o pool para uso em outros módulos
