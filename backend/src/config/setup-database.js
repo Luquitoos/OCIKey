@@ -55,6 +55,52 @@ const createTables = async () => {
     `);
 
     /*
+      Tabela de participantes
+      Armazena dados dos alunos que fazem as provas
+    */
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS participantes (
+        id SERIAL PRIMARY KEY,
+        nome VARCHAR(255) NOT NULL,
+        escola VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    /*
+      Tabela de provas
+      Armazena os gabaritos das provas
+    */
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS provas (
+        id SERIAL PRIMARY KEY,
+        gabarito VARCHAR(255) NOT NULL,
+        peso_questao DECIMAL(5,2) DEFAULT 0.50,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    /*
+      Tabela de leituras
+      Armazena os resultados das leituras de gabaritos
+    */
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS leituras (
+        id SERIAL PRIMARY KEY,
+        arquivo VARCHAR(255) NOT NULL,
+        erro INTEGER NOT NULL,
+        id_prova INTEGER,
+        id_participante INTEGER,
+        gabarito VARCHAR(255),
+        acertos INTEGER,
+        nota DECIMAL(5,2),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (id_prova) REFERENCES provas(id) ON DELETE SET NULL,
+        FOREIGN KEY (id_participante) REFERENCES participantes(id) ON DELETE SET NULL
+      )
+    `);
+
+    /*
      Criação de índices para otimização de performance
      Melhora velocidade de consultas em campos frequentemente pesquisados
     */
@@ -65,6 +111,9 @@ const createTables = async () => {
       CREATE INDEX IF NOT EXISTS idx_token_blacklist_expires ON token_blacklist(expires_at);
       CREATE INDEX IF NOT EXISTS idx_rate_limit_key ON rate_limit_attempts(key);
       CREATE INDEX IF NOT EXISTS idx_rate_limit_created ON rate_limit_attempts(created_at);
+      CREATE INDEX IF NOT EXISTS idx_leituras_prova ON leituras(id_prova);
+      CREATE INDEX IF NOT EXISTS idx_leituras_participante ON leituras(id_participante);
+      CREATE INDEX IF NOT EXISTS idx_participantes_nome ON participantes(nome);
     `);
     
     console.log('Configuração do Banco de Dados feita');
