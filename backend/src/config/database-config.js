@@ -10,7 +10,7 @@ const { Pool } = pg;
 Definindo parâmetros de conexão com valores do env ou os padrões que criei no PostgreSQL */
 export const dbConfig = {
   host: process.env.DB_HOST || 'localhost', // Host do banco (padrão: localhost)
-  port: process.env.DB_PORT || 5000, // Porta do banco (padrão: 5000)
+  port: process.env.DB_PORT || 5432, // Porta do banco (padrão: 5000)
   database: process.env.DB_NAME || 'ocikey_db', // Nome do banco
   user: process.env.DB_USER || 'OCI_user', // Usuário do banco
   password: process.env.DB_PASSWORD || 'petoci', // Senha do banco
