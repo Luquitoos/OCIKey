@@ -24,9 +24,9 @@ COPY . .
 # Necessário para integração com biblioteca de leitura de gabarito
 RUN npm run build
 
-# Expõe a porta 3001 para acesso externo
+# Expõe a porta 5000 para acesso externo
 # Porta padrão do servidor Express
-EXPOSE 3001
+EXPOSE 5000
 
 # Comando para iniciar a aplicação
 # Usa npm start que executa "node src/index.js"
