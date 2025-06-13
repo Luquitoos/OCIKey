@@ -1,5 +1,14 @@
 # OCIKey Backend - Sistema de Controle de Gabaritos
 
+## 📚 Documentação
+
+- **[README.md](README.md)** - Visão geral e guia de início rápido
+- **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** - Documentação completa da API
+- **[TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md)** - Documentação técnica detalhada
+- **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Guia de deployment e produção
+
+---
+
 ## Visão Geral
 
 O OCIKey Backend é uma aplicação Node.js desenvolvida para servir como interface de controle de gabaritos, permitindo a leitura automatizada de gabaritos de provas através de processamento de imagens e integração com banco de dados PostgreSQL.
@@ -224,6 +233,8 @@ docker-compose down
 
 ## API Endpoints
 
+Para documentação completa da API com exemplos de requisições e respostas, consulte [API_DOCUMENTATION.md](API_DOCUMENTATION.md).
+
 ### Autenticação
 - `POST /api/auth/register` - Registrar usuário
 - `POST /api/auth/login` - Login
@@ -253,6 +264,8 @@ docker-compose down
 - `DELETE /api/leituras/:id` - Deletar leitura
 
 ## Integração com Biblioteca C++
+
+Para detalhes técnicos completos sobre a integração C++, consulte [TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md).
 
 ### Por que é necessária a ponte (addon)?
 
@@ -346,6 +359,8 @@ CREATE TABLE leituras (
 - `npm run import:provas` - Importa CSV de provas
 
 ## Docker
+
+Para instruções completas de deployment em produção, consulte [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md).
 
 ### Dockerfile
 

@@ -1,8 +1,21 @@
 # API Documentation - OCIKey Backend
 
+## 📚 Documentação
+
+- **[README.md](README.md)** - Visão geral e guia de início rápido
+- **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** - Documentação completa da API
+- **[TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md)** - Documentação técnica detalhada
+- **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Guia de deployment e produção
+
+---
+
 ## Visão Geral da API
 
 A API do OCIKey Backend fornece endpoints para gerenciamento de gabaritos, participantes, provas e leituras automatizadas. Todas as rotas (exceto autenticação) requerem autenticação JWT.
+
+Para informações sobre instalação e configuração, consulte [README.md](README.md).  
+Para detalhes técnicos de implementação, consulte [TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md).  
+Para deployment em produção, consulte [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md).
 
 **Base URL**: `http://localhost:5000/api`
 
