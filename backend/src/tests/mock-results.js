@@ -1,4 +1,4 @@
-// Dados esperados baseados no output fornecido
+// Dados esperados baseados no output fornecido no drive do pet
 export const mockResults = {
     '0001.png': { erro: 0, id_prova: 4, id_participante: 1, leitura: 'X-Xdebabcbb-baca-cbc' },
     '0002.png': { erro: 2, id_prova: 6, id_participante: 3, leitura: 'a-bedabdbcc-eebacbca' },

@@ -1,4 +1,4 @@
-// Participantes identificados nos testes realizados
+// Participantes identificados nos testes realizados (usei pra comparar)
 const participantesIdentificados = [
     { arquivo: '0001.png', id_participante: 1, nome: 'Ana Clara Silva', escola: 'Escola Nova' },
     { arquivo: '0002.png', id_participante: 3, nome: 'Maria Luiza Oliveira', escola: 'Escola Nova' },

@@ -138,7 +138,7 @@ class CleanupService {
   }
 
   /* Executa limpeza manual sob demanda
-     ��til para testes, manutenção ou situações específicas
+     util para testes, manutenção ou situações específicas
      Não depende do agendamento automático */
   async manualCleanup() {
     console.log('Executando limpeza manual...');

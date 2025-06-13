@@ -58,7 +58,7 @@ export const responses = {
   LOGIN_SUCCESS: 'Login realizado com sucesso',
   LOGOUT_SUCCESS: 'Logout realizado com sucesso',
   EMAIL_EXISTS: 'Usuário com este email já existe',
-  USERNAME_TAKEN: 'Nome de usuário j�� está em uso',
+  USERNAME_TAKEN: 'Nome de usuário já está em uso',
   
   // Mensagens relacionadas a tokens JWT e autorização
   TOKEN_REQUIRED: 'Token de acesso obrigatório',
