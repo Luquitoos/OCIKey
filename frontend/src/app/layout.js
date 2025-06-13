@@ -8,6 +8,7 @@ const golosText = Golos_Text({
 
 const blinker = Blinker({
   variable: "--font-blinker",
+  weight: ["400", "600", "800"],
   subsets: ["latin"],
 });
 
