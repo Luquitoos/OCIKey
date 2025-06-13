@@ -20,12 +20,9 @@
       "cflags!": [ "-fno-exceptions" ],
       "cflags_cc!": [ "-fno-exceptions" ],
       "defines": [ "NAPI_DISABLE_CPP_EXCEPTIONS" ],
-      "conditions": [
-        ["OS=='linux'", {
-          "libraries": [
-            "-Wl,-rpath,<(module_root_dir)/../../biblioteca"
-          ]
-        }]
+      "ldflags": [
+        "-Wl,-rpath,<(module_root_dir)/../../biblioteca",
+        "-Wl,-rpath,'$ORIGIN/../../biblioteca'"
       ]
     }
   ]
