@@ -52,10 +52,8 @@ class TokenBlacklist {
     try {
       const query = 'DELETE FROM token_blacklist WHERE expires_at <= NOW()';
       const result = await pool.query(query);
-      console.log(`Removidos ${result.rowCount} tokens expirados da blacklist`);
       return result.rowCount;
     } catch (error) {
-      console.error('Erro ao limpar tokens expirados:', error);
       throw error;
     }
   }

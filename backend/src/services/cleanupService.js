@@ -73,16 +73,28 @@ class CleanupService {
       ]);
 
       // Log detalhado dos resultados de cada operação
+      let totalCleaned = 0;
       results.forEach((result, index) => {
         const operations = ['tokens expirados', 'tentativas de rate limit', 'sessões expiradas'];
         if (result.status === 'fulfilled') {
-          console.log(`Limpeza de ${operations[index]}: ${result.value} registros removidos`);
+          const count = result.value || 0;
+          totalCleaned += count;
+          if (count > 0) {
+            console.log(`${operations[index]}: ${count} registros removidos`);
+          }
         } else {
-          console.error(`Erro na limpeza de ${operations[index]}:`, result.reason);
+          // Suprime erro específico da tabela active_sessions que não existe
+          if (!result.reason?.message?.includes('active_sessions')) {
+            console.error(`Erro na limpeza de ${operations[index]}:`, result.reason);
+          }
         }
       });
 
-      console.log('Limpeza automática concluída');
+      if (totalCleaned > 0) {
+        console.log(`Limpeza concluída - ${totalCleaned} registros removidos no total`);
+      } else {
+        console.log('Limpeza concluída - Nenhum registro para remover');
+      }
     } catch (error) {
       console.error('Erro durante limpeza automática:', error);
     }
@@ -95,7 +107,6 @@ class CleanupService {
     try {
       return await TokenBlacklist.cleanupExpiredTokens();
     } catch (error) {
-      console.error('Erro ao limpar tokens expirados:', error);
       throw error;
     }
   }
@@ -116,7 +127,6 @@ class CleanupService {
 
       return result.rowCount; // Retorna número de registros removidos
     } catch (error) {
-      console.error('Erro ao limpar tentativas de rate limit:', error);
       throw error;
     }
   }
@@ -132,7 +142,10 @@ class CleanupService {
 
       return result.rowCount; // Retorna número de sessões removidas
     } catch (error) {
-      console.error('Erro ao limpar sessões expiradas:', error);
+      // Suprime erro se a tabela não existir (é esperado)
+      if (error.code === '42P01' && error.message.includes('active_sessions')) {
+        return 0; // Retorna 0 registros removidos
+      }
       throw error;
     }
   }

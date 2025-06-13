@@ -61,14 +61,13 @@ app.use('*', (req, res) => {
  Exibe informações de conexão no console
 */
 app.listen(PORT, () => {
-  console.log(`Servidor OCIKey Backend rodando na porta ${PORT}`);
-  console.log(`Verificação de saúde: http://localhost:${PORT}/health`);
-  console.log(`Endpoints de autenticação disponíveis em: http://localhost:${PORT}/api/auth/`);
+  console.log('OCIKey Backend iniciado com sucesso!');
+  console.log(`Health check: http://localhost:${PORT}/health`);
+  console.log(`API endpoints: http://localhost:${PORT}/api/`);
   
   // Inicia o serviço de limpeza automática
   cleanupService.start();
   
-  // Graceful shutdown
   process.on('SIGTERM', () => {
     console.log('Recebido SIGTERM, encerrando servidor...');
     cleanupService.stop();
