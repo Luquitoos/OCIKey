@@ -57,6 +57,15 @@ async function processarUmaLeitura(caminhoImagem) {
     // Calcula acertos e nota
     const { acertos, nota } = await Acertos(leitura.id_prova, leitura.leitura || '');
 
+    // Verifica se o participante existe no banco
+    let participanteId = null;
+    if (leitura.id_participante !== -1) {
+        const participanteCheck = await pool.query('SELECT id FROM participantes WHERE id = $1', [leitura.id_participante]);
+        if (participanteCheck.rows.length > 0) {
+            participanteId = leitura.id_participante;
+        }
+    }
+
     // Salva no banco de dados
     const result = await pool.query(
         `INSERT INTO leituras (arquivo, erro, id_prova, id_participante, gabarito, acertos, nota)
@@ -66,7 +75,7 @@ async function processarUmaLeitura(caminhoImagem) {
             caminhoImagem,
             leitura.erro,
             leitura.id_prova === -1 ? null : leitura.id_prova,
-            leitura.id_participante === -1 ? null : leitura.id_participante,
+            participanteId,
             leitura.leitura || '',
             acertos,
             nota
