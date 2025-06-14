@@ -215,30 +215,116 @@ npm run db:init
 - As tabelas ficam **permanentes** no banco PostgreSQL
 - **NÃO precisa** rodar novamente a cada reinicialização
 
-### Execução Local
+### 🚀 Guia Rápido - Execução Local (Sem Docker)
 
-1. **Inicie o PostgreSQL** (se não estiver usando Docker)
+#### Para usuários que acabaram de clonar o repositório:
 
-2. **Configure o banco (primeira vez apenas):**
+**Pré-requisitos:**
+- Node.js 18+ instalado
+- Compilador C++ (g++, make, python3)
+
+**Passo a passo:**
+
+1. **Clone e navegue:**
+```bash
+git clone <url-do-repositorio>
+cd OCIKey/backend
+```
+
+2. **Instale dependências (compila addon C++ automaticamente):**
+```bash
+npm install
+```
+
+3. **Configure o banco (primeira vez apenas):**
 ```bash
 npm run db:setup
 ```
 
-3. **Execute o servidor:**
+4. **Execute o servidor:**
 ```bash
 # Desenvolvimento (com nodemon)
 npm run dev
 
 # Produção
 npm start
-```
 
-4. **Verifique se está funcionando:**
+5. **Teste se funcionou:**
 ```bash
 curl http://localhost:5000/health
 ```
 
+**✅ Pronto! O sistema está rodando em http://localhost:5000**
+
+#### ⚠️ Importante sobre o Banco de Dados
+
+**O sistema já está configurado para usar o banco de produção** (Railway PostgreSQL) que contém dados reais e está funcionando. Você **não precisa** configurar nada adicional.
+
+- **Vantagem**: Funciona imediatamente sem configuração
+- **Dados**: Já contém participantes, provas e leituras de exemplo
+- **Credenciais**: Estão no arquivo `.env` (confio na boa fé das pessoas)
+
+#### Se quiser usar seu próprio banco PostgreSQL local:
+
+1. **Edite o arquivo `.env`:**
+```env
+# Substitua pelas suas configurações
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=ocikey_db
+DB_USER=seu_usuario
+DB_PASSWORD=sua_senha
+```
+
+2. **Configure o banco:**
+```bash
+# Crie o banco no PostgreSQL
+sudo -u postgres psql
+```
+```sql
+CREATE USER seu_usuario WITH PASSWORD 'sua_senha';
+CREATE DATABASE ocikey_db OWNER seu_usuario;
+GRANT ALL PRIVILEGES ON DATABASE ocikey_db TO seu_usuario;
+\q
+```
+
+3. **Configure as tabelas:**
+```bash
+npm run db:init
+```
+
+#### Comandos Úteis
+
+```bash
+# Desenvolvimento com reload automático
+npm run dev
+
+# Produção
+npm start
+
+# Testar processamento de imagens
+node src/tests/test-todas-imagens.js
+
+# Importar dados CSV (se usando banco local)
+npm run import:participantes
+npm run import:provas
+```
+
 ### Execução com Docker
+
+#### ⚠️ Nota sobre Variáveis de Ambiente no Docker
+
+**O `docker-compose.yml` contém as credenciais do meu banco de produção hardcoded** para facilitar o uso imediato. Se você quiser usar seu próprio banco, edite as variáveis de ambiente no arquivo `docker-compose.yml`.
+
+**Configuração atual (funciona imediatamente):**
+```yaml
+environment:
+  - DB_HOST=turntable.proxy.rlwy.net
+  - DB_PORT=24899
+  - DB_NAME=railway
+  - DB_USER=postgres
+  - DB_PASSWORD=CXfxBDYwgCblBScYNBRUcaZzUIhYughi
+```
 
 1. **Execute com Docker Compose:**
 ```bash

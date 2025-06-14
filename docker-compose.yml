@@ -29,11 +29,11 @@ services:
       - "5000:5000"
     environment:
       - NODE_ENV=production
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_NAME=ocikey_db
-      - DB_USER=OCI_user
-      - DB_PASSWORD=petoci
+      - DB_HOST=turntable.proxy.rlwy.net
+      - DB_PORT=24899
+      - DB_NAME=railway
+      - DB_USER=postgres
+      - DB_PASSWORD=CXfxBDYwgCblBScYNBRUcaZzUIhYughi
       - JWT_SECRET=f054e756-2fe3-4b44-bf90-bcbd41771778
       - JWT_EXPIRES_IN=7d
       - LD_LIBRARY_PATH=/app/biblioteca
