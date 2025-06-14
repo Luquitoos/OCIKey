@@ -461,7 +461,7 @@ docker-compose down -v
 **Funcionalidade**: Upload seguro de imagens
 **Implementação**: Multer com validações
 
-- **Tipos aceitos**: PNG, JPG, JPEG
+- **Tipos aceitos**: PNG, JPG, JPEG, PDF e etc
 - **Tamanho máximo**: Configurável
 - **Armazenamento**: Diretório `uploads/`
 - **Limpeza automática**: Arquivos antigos removidos
