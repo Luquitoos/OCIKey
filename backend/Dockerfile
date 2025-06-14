@@ -25,7 +25,7 @@ COPY . .
 RUN npm run build
 
 # Define variáveis de ambiente necessárias
-ENV NODE_ENV=production
+ENV NODE_ENV=development
 ENV PORT=5000
 ENV LD_LIBRARY_PATH=/app/biblioteca:$LD_LIBRARY_PATH
 
