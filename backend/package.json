@@ -11,6 +11,7 @@
     "db:setup": "node src/config/setup-database.js",
     "db:seed": "node src/config/seed-database.js",
     "db:init": "npm run db:setup && npm run db:seed",
+    "create-users": "node src/config/create-users-for-participants.js",
     "import:provas": "node src/config/import-provas.js",
     "import:participantes": "node src/config/import-participantes.js"
   },

@@ -89,20 +89,31 @@ export const importarParticipantesCSV = async (req, res) => {
     }
 };
 
-// Listar todos os participantes
+// Listar participantes (filtrados por usuário se não for admin)
 export const listarParticipantes = async (req, res) => {
     try {
-        const { escola, page = 1, limit = 50 } = req.query;
+        const { escola, page = 1, limit = 50, meus = false } = req.query;
+        const userId = req.user.id;
+        const userRole = req.user.role;
         
-        let query = 'SELECT id, nome, escola, created_at FROM participantes';
+        let query = 'SELECT id, nome, escola, user_id, created_at FROM participantes';
         let params = [];
-        let whereClause = '';
+        let whereConditions = [];
+
+        // Se não for admin e meus=true, filtra apenas participantes do usuário
+        if (meus === 'true' || (userRole !== 'admin' && userRole !== 'teacher')) {
+            whereConditions.push(`user_id = $${params.length + 1}`);
+            params.push(userId);
+        }
 
         // Filtro por escola se fornecido
         if (escola) {
-            whereClause = ' WHERE escola ILIKE $1';
+            whereConditions.push(`escola ILIKE $${params.length + 1}`);
             params.push(`%${escola}%`);
         }
+
+        // Monta WHERE clause
+        const whereClause = whereConditions.length > 0 ? ' WHERE ' + whereConditions.join(' AND ') : '';
 
         // Paginação
         const offset = (page - 1) * limit;
@@ -115,18 +126,20 @@ export const listarParticipantes = async (req, res) => {
 
         // Conta total para paginação
         const countQuery = 'SELECT COUNT(*) FROM participantes' + whereClause;
-        const countParams = escola ? [escola] : [];
+        const countParams = params.slice(0, -2); // Remove limit e offset
         const { rows: countRows } = await pool.query(countQuery, countParams);
         const total = parseInt(countRows[0].count);
 
         res.json({
             success: true,
-            participantes: rows,
-            pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
-                total,
-                pages: Math.ceil(total / limit)
+            data: {
+                participantes: rows,
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    total,
+                    pages: Math.ceil(total / limit)
+                }
             }
         });
     } catch (error) {
@@ -139,15 +152,23 @@ export const listarParticipantes = async (req, res) => {
 export const obterParticipante = async (req, res) => {
     try {
         const { id } = req.params;
+        const userId = req.user.id;
+        const userRole = req.user.role;
         
         if (isNaN(id)) {
             return res.status(400).json({ error: 'ID do participante deve ser um número' });
         }
 
-        const { rows } = await pool.query(
-            'SELECT id, nome, escola, created_at FROM participantes WHERE id = $1',
-            [id]
-        );
+        let query = 'SELECT id, nome, escola, user_id, created_at FROM participantes WHERE id = $1';
+        let params = [id];
+
+        // Se não for admin/teacher, só pode ver seus próprios participantes
+        if (userRole !== 'admin' && userRole !== 'teacher') {
+            query += ' AND user_id = $2';
+            params.push(userId);
+        }
+
+        const { rows } = await pool.query(query, params);
         
         if (rows.length === 0) {
             return res.status(404).json({ error: 'Participante não encontrado' });
@@ -155,7 +176,9 @@ export const obterParticipante = async (req, res) => {
 
         res.json({
             success: true,
-            participante: rows[0]
+            data: {
+                participante: rows[0]
+            }
         });
     } catch (error) {
         console.error('Erro ao obter participante:', error);
@@ -167,20 +190,33 @@ export const obterParticipante = async (req, res) => {
 export const criarParticipante = async (req, res) => {
     try {
         const { nome, escola } = req.body;
+        const userId = req.user.id;
+        const userEscola = req.user.escola;
         
-        if (!nome || !escola) {
-            return res.status(400).json({ error: 'Nome e escola são obrigatórios' });
+        if (!nome) {
+            return res.status(400).json({ error: 'Nome é obrigatório' });
+        }
+
+        // Usa a escola do usuário se não for fornecida, ou a fornecida se especificada
+        const escolaFinal = escola || userEscola;
+        
+        if (!escolaFinal) {
+            return res.status(400).json({ 
+                error: 'Escola é obrigatória. Forneça uma escola ou configure sua escola no perfil.' 
+            });
         }
 
         const { rows } = await pool.query(
-            'INSERT INTO participantes (nome, escola) VALUES ($1, $2) RETURNING *',
-            [nome.trim(), escola.trim()]
+            'INSERT INTO participantes (nome, escola, user_id) VALUES ($1, $2, $3) RETURNING *',
+            [nome.trim(), escolaFinal.trim(), userId]
         );
 
         res.status(201).json({
             success: true,
             message: 'Participante criado com sucesso',
-            participante: rows[0]
+            data: {
+                participante: rows[0]
+            }
         });
     } catch (error) {
         console.error('Erro ao criar participante:', error);
@@ -193,6 +229,8 @@ export const atualizarParticipante = async (req, res) => {
     try {
         const { id } = req.params;
         const { nome, escola } = req.body;
+        const userId = req.user.id;
+        const userRole = req.user.role;
         
         if (isNaN(id)) {
             return res.status(400).json({ error: 'ID do participante deve ser um número' });
@@ -200,6 +238,21 @@ export const atualizarParticipante = async (req, res) => {
 
         if (!nome && !escola) {
             return res.status(400).json({ error: 'Pelo menos um campo deve ser fornecido para atualização' });
+        }
+
+        // Verifica se o participante existe e se o usuário tem permissão
+        let checkQuery = 'SELECT id, user_id FROM participantes WHERE id = $1';
+        let checkParams = [id];
+
+        if (userRole !== 'admin' && userRole !== 'teacher') {
+            checkQuery += ' AND user_id = $2';
+            checkParams.push(userId);
+        }
+
+        const { rows: checkRows } = await pool.query(checkQuery, checkParams);
+        
+        if (checkRows.length === 0) {
+            return res.status(404).json({ error: 'Participante não encontrado ou sem permissão' });
         }
 
         // Monta a query dinamicamente
@@ -224,14 +277,12 @@ export const atualizarParticipante = async (req, res) => {
             valores
         );
 
-        if (rows.length === 0) {
-            return res.status(404).json({ error: 'Participante não encontrado' });
-        }
-
         res.json({
             success: true,
             message: 'Participante atualizado com sucesso',
-            participante: rows[0]
+            data: {
+                participante: rows[0]
+            }
         });
     } catch (error) {
         console.error('Erro ao atualizar participante:', error);
@@ -239,28 +290,83 @@ export const atualizarParticipante = async (req, res) => {
     }
 };
 
-// Deletar um participante
-export const deletarParticipante = async (req, res) => {
+// Associar participante ao usuário logado
+export const associarParticipante = async (req, res) => {
     try {
         const { id } = req.params;
+        const userId = req.user.id;
         
         if (isNaN(id)) {
             return res.status(400).json({ error: 'ID do participante deve ser um número' });
         }
 
-        const { rows } = await pool.query(
-            'DELETE FROM participantes WHERE id = $1 RETURNING *',
+        // Verifica se o participante existe
+        const { rows: checkRows } = await pool.query(
+            'SELECT id, user_id FROM participantes WHERE id = $1',
             [id]
         );
+        
+        if (checkRows.length === 0) {
+            return res.status(404).json({ error: 'Participante não encontrado' });
+        }
+
+        if (checkRows[0].user_id) {
+            return res.status(400).json({ error: 'Participante já está associado a um usuário' });
+        }
+
+        // Associa o participante ao usuário
+        const { rows } = await pool.query(
+            'UPDATE participantes SET user_id = $1 WHERE id = $2 RETURNING *',
+            [userId, id]
+        );
+
+        res.json({
+            success: true,
+            message: 'Participante associado com sucesso',
+            data: {
+                participante: rows[0]
+            }
+        });
+    } catch (error) {
+        console.error('Erro ao associar participante:', error);
+        res.status(500).json({ error: 'Erro interno ao associar participante' });
+    }
+};
+
+// Deletar um participante
+export const deletarParticipante = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.id;
+        const userRole = req.user.role;
+        
+        if (isNaN(id)) {
+            return res.status(400).json({ error: 'ID do participante deve ser um número' });
+        }
+
+        // Verifica permissão antes de deletar
+        let deleteQuery = 'DELETE FROM participantes WHERE id = $1';
+        let deleteParams = [id];
+
+        if (userRole !== 'admin' && userRole !== 'teacher') {
+            deleteQuery += ' AND user_id = $2';
+            deleteParams.push(userId);
+        }
+
+        deleteQuery += ' RETURNING *';
+
+        const { rows } = await pool.query(deleteQuery, deleteParams);
 
         if (rows.length === 0) {
-            return res.status(404).json({ error: 'Participante não encontrado' });
+            return res.status(404).json({ error: 'Participante não encontrado ou sem permissão' });
         }
 
         res.json({
             success: true,
             message: 'Participante deletado com sucesso',
-            participante: rows[0]
+            data: {
+                participante: rows[0]
+            }
         });
     } catch (error) {
         console.error('Erro ao deletar participante:', error);
@@ -277,10 +383,41 @@ export const listarEscolas = async (req, res) => {
         
         res.json({
             success: true,
-            escolas: rows.map(row => row.escola)
+            data: {
+                escolas: rows.map(row => row.escola)
+            }
         });
     } catch (error) {
         console.error('Erro ao listar escolas:', error);
         res.status(500).json({ error: 'Erro interno ao listar escolas' });
+    }
+};
+
+// Obter perfil do participante do usuário logado
+export const meuPerfil = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        
+        const { rows } = await pool.query(
+            'SELECT id, nome, escola, created_at FROM participantes WHERE user_id = $1',
+            [userId]
+        );
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ 
+                success: false,
+                error: 'Você ainda não tem um perfil de participante associado' 
+            });
+        }
+
+        res.json({
+            success: true,
+            data: {
+                participante: rows[0]
+            }
+        });
+    } catch (error) {
+        console.error('Erro ao obter perfil do participante:', error);
+        res.status(500).json({ error: 'Erro interno ao obter perfil' });
     }
 };

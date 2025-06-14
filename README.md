@@ -69,7 +69,7 @@ O sistema segue uma arquitetura em camadas:
 ┌─────────────────┐
 │   Frontend      │ (Next.js - não incluído neste backend)
 │   (Next.js)     │
-└─────────────────┘
+└──────────��──────┘
          │
 ┌─────────────────┐
 │   Backend API   │ (Express.js + Node.js)
@@ -106,7 +106,7 @@ O sistema segue uma arquitetura em camadas:
 ### Integração C++
 - **Node-API (N-API)** - Interface Node.js ↔ C++
 - **node-gyp** - Compilação de módulos nativos
-- **bindings** - Carregamento de módulos nativos
+- **bindings** - Carregamento de m��dulos nativos
 
 ### DevOps
 - **Docker** - Containerização
@@ -427,6 +427,7 @@ CREATE TABLE users (
     username VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
+    escola VARCHAR(255),
     role VARCHAR(20) DEFAULT 'user',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -466,6 +467,7 @@ CREATE TABLE leituras (
 - `npm run db:setup` - Cria tabelas (execute UMA VEZ antes do primeiro uso)
 - `npm run db:seed` - Popula dados iniciais
 - `npm run db:init` - Setup + seed completo
+- `npm run create-users` - Cria usuários automaticamente para participantes existentes
 - `npm run import:participantes <arquivo.csv>` - Importa CSV de participantes
 - `npm run import:provas <arquivo.csv> [peso]` - Importa CSV de provas
 
@@ -661,100 +663,5 @@ O diretório `src/tests/` contém diversos scripts de teste:
 ```bash
 # Teste do addon C++
 node src/tests/test-addon.js
-
-# Teste de múltiplas imagens
-node src/tests/test-multiplas.js
-
-# Teste completo do sistema
-node src/tests/test-sistema-completo.js
+...
 ```
-
-### Dados de Teste
-
-O projeto inclui:
-- **16 imagens de teste** em `img/`
-- **CSV de participantes** em `src/tests/exemplo-participantes.csv`
-- **CSV de provas** em `src/tests/exemplo-provas.csv`
-
-## Exemplo de Output
-
-O sistema produz output no formato especificado:
-
-```
-arquivo          erro id_prova id_aluno gabarito              acertos nota
-0001.png         0    4        1        X-Xdebabcbb-baca-cbc  1/20    0.50
-0002.png         2    6        3        a-bedabdbcc-eebacbca  2/20    1.00
-0003.png         0    4        4        decabbcaXea-abecacad  2/20    1.00
-```
-
-**Legenda**:
-- `erro`: 0=sucesso, 1=erro Aztec, 2=área, 3=fatal
-- `id_prova`: ID da prova (-1 se não identificado)
-- `id_aluno`: ID do participante (-1 se não identificado)
-- `gabarito`: String com respostas (a-e=resposta, 0=branco, X/?=múltipla, -=erro)
-- `acertos`: Número de acertos sobre total de questões
-- `nota`: Nota calculada (acertos × peso_questão)
-
-## Troubleshooting
-
-### Problemas Comuns
-
-1. **Erro de compilação do addon**:
-```bash
-# Instale dependências de build
-sudo apt-get install python3 make g++ gcc
-npm run build
-```
-
-2. **Erro de conexão com banco**:
-```bash
-# Verifique se PostgreSQL está rodando
-sudo systemctl status postgresql
-# Ou com Docker
-docker-compose ps
-```
-
-3. **Erro de permissão em uploads**:
-```bash
-# Ajuste permissões do diretório
-chmod 755 uploads/
-```
-
-4. **Biblioteca C++ não encontrada**:
-```bash
-# Verifique se a biblioteca está no local correto
-ls -la biblioteca/
-# Configure LD_LIBRARY_PATH se necessário
-export LD_LIBRARY_PATH=/app/biblioteca:$LD_LIBRARY_PATH
-```
-
-### Logs e Debug
-
-```bash
-# Logs do Docker Compose
-docker-compose logs -f backend
-
-# Debug do Node.js
-NODE_ENV=development npm run dev
-
-# Verificar health check
-curl http://localhost:5000/health
-```
-
-## Contribuição
-
-Para contribuir com o projeto:
-
-1. Faça fork do repositório
-2. Crie uma branch para sua feature
-3. Implemente os testes necessários
-4. Faça commit das mudanças
-5. Abra um Pull Request
-
-## Licença
-
-Este projeto é desenvolvido para fins acadêmicos e de pesquisa.
-
----
-
-**Desenvolvido para o projeto OCIKey - Sistema de Controle de Gabaritos**

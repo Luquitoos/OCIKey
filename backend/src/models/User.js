@@ -21,7 +21,7 @@ class User {
      userData.password - Senha em texto plano (será criptografada)
      userData.role - Role/papel do usuário (padrão: 'user')
      Retorna dados do usuário criado (sem senha) */
-  static async create({ username, email, password, role = 'user' }) {
+  static async create({ username, email, password, escola, role = 'user' }) {
     try {
       // bcrypt.hash() criptografa a senha com salt automático
       // 10 rounds é um bom equilíbrio entre segurança e performance
@@ -30,13 +30,13 @@ class User {
       // Query SQL para inserir novo usuário com timestamps automáticos
       // RETURNING retorna os dados inseridos (exceto senha por segurança)
       const query = `
-        INSERT INTO users (username, email, password, role, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, NOW(), NOW())
-        RETURNING id, username, email, role, created_at, updated_at
+        INSERT INTO users (username, email, password, escola, role, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+        RETURNING id, username, email, escola, role, created_at, updated_at
       `;
 
       // Executa a query com parâmetros seguros (previne SQL injection)
-      const result = await pool.query(query, [username, email, hashedPassword, role]);
+      const result = await pool.query(query, [username, email, hashedPassword, escola, role]);
       return result.rows[0]; // Retorna o primeiro (e único) resultado
     } catch (error) {
       console.error('Erro ao criar usuário:', error);
@@ -51,7 +51,7 @@ class User {
   static async findById(id) {
     try {
       // Query que exclui a senha por segurança (não é necessária para identificação)
-      const query = 'SELECT id, username, email, role, created_at, updated_at FROM users WHERE id = $1';
+      const query = 'SELECT id, username, email, escola, role, created_at, updated_at FROM users WHERE id = $1';
       const result = await pool.query(query, [id]);
       return result.rows[0] || null; // Retorna o usuário ou null se não encontrado
     } catch (error) {
@@ -143,7 +143,7 @@ class User {
         UPDATE users 
         SET ${fields.join(', ')} 
         WHERE id = ${paramCount}
-        RETURNING id, username, email, role, created_at, updated_at
+        RETURNING id, username, email, escola, role, created_at, updated_at
       `;
 
       const result = await pool.query(query, values);

@@ -1,4 +1,5 @@
 import express from 'express';
+import { authenticateToken } from '../middleware/auth.js';
 import {
     importarParticipantesCSV,
     listarParticipantes,
@@ -6,16 +7,27 @@ import {
     criarParticipante,
     atualizarParticipante,
     deletarParticipante,
-    listarEscolas
+    listarEscolas,
+    associarParticipante,
+    meuPerfil
 } from '../controllers/participantesController.js';
 
 const router = express.Router();
 
-// Rota para importar participantes via CSV
-router.post('/import-csv', importarParticipantesCSV);
+// Todas as rotas requerem autenticação
+router.use(authenticateToken);
+
+// Rota para importar participantes via CSV (API)
+router.post('/import', importarParticipantesCSV);
+
+// Rota para obter perfil do participante do usuário logado
+router.get('/meu-perfil', meuPerfil);
 
 // Rota para listar escolas únicas
 router.get('/escolas', listarEscolas);
+
+// Rota para associar participante ao usuário logado
+router.put('/:id/associar', associarParticipante);
 
 // CRUD de participantes
 router.get('/', listarParticipantes);

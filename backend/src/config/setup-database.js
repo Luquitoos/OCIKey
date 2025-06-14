@@ -22,6 +22,7 @@ const createTables = async () => {
         username VARCHAR(50) UNIQUE NOT NULL,
         email VARCHAR(100) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
+        escola VARCHAR(255),
         role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('admin', 'user', 'teacher')),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -57,12 +58,14 @@ const createTables = async () => {
     /*
       Tabela de participantes
       Armazena dados dos alunos que fazem as provas
+      user_id liga o participante ao usuário logado
     */
     await pool.query(`
       CREATE TABLE IF NOT EXISTS participantes (
         id SERIAL PRIMARY KEY,
         nome VARCHAR(255) NOT NULL,
         escola VARCHAR(255) NOT NULL,
+        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -107,6 +110,7 @@ const createTables = async () => {
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
       CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+      CREATE INDEX IF NOT EXISTS idx_users_escola ON users(escola);
       CREATE INDEX IF NOT EXISTS idx_token_blacklist_token ON token_blacklist(token);
       CREATE INDEX IF NOT EXISTS idx_token_blacklist_expires ON token_blacklist(expires_at);
       CREATE INDEX IF NOT EXISTS idx_rate_limit_key ON rate_limit_attempts(key);
@@ -114,6 +118,7 @@ const createTables = async () => {
       CREATE INDEX IF NOT EXISTS idx_leituras_prova ON leituras(id_prova);
       CREATE INDEX IF NOT EXISTS idx_leituras_participante ON leituras(id_participante);
       CREATE INDEX IF NOT EXISTS idx_participantes_nome ON participantes(nome);
+      CREATE INDEX IF NOT EXISTS idx_participantes_user ON participantes(user_id);
     `);
     
     console.log('Configuração do Banco de Dados feita');

@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import TokenBlacklist from '../models/TokenBlacklist.js';
 import { successResponse, errorResponse, responses } from '../utils/response.js';
+import { pool } from '../config/database-config.js';
 
 /*
   Gera um token JWT para autenticação do usuário
@@ -25,6 +26,7 @@ const createUserResponse = (user) => ({
   id: user.id,
   username: user.username,
   email: user.email,
+  escola: user.escola,
   role: user.role
 });
 
@@ -34,7 +36,7 @@ const createUserResponse = (user) => ({
 */
 export const register = async (req, res) => {
   try {
-    const { username, email, password, role } = req.body;
+    const { username, email, password, escola, role } = req.body;
 
     // Verifica se já existe usuário com este email
     const existingUser = await User.findByEmail(email);
@@ -49,7 +51,20 @@ export const register = async (req, res) => {
     }
 
     // Cria novo usuário no banco de dados
-    const newUser = await User.create({ username, email, password, role });
+    const newUser = await User.create({ username, email, password, escola, role });
+    
+    // Se forneceu escola, cria automaticamente um participante com o mesmo nome
+    if (escola && username) {
+      try {
+        await pool.query(
+          'INSERT INTO participantes (nome, escola, user_id) VALUES ($1, $2, $3)',
+          [username, escola, newUser.id]
+        );
+      } catch (participanteError) {
+        console.warn('Erro ao criar participante automático:', participanteError);
+        // Não falha o registro se não conseguir criar o participante
+      }
+    }
     
     // Gera token JWT para o novo usuário
     const token = generateToken(newUser.id);
