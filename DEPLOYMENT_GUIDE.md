@@ -96,10 +96,16 @@ LD_LIBRARY_PATH=./biblioteca
 # Compilar addon C++
 npm run build
 
-# Configurar banco de dados
-npm run db:init
+# Configurar banco de dados (OBRIGATÓRIO - primeira vez)
+npm run db:setup
 
 # Importar dados iniciais (opcional)
+npm run db:seed
+
+# OU fazer setup completo
+npm run db:init
+
+# Importar dados via CSV (opcional)
 npm run import:participantes
 npm run import:provas
 

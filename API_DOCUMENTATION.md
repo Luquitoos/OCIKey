@@ -272,6 +272,45 @@ imagens: <file[]> (max 20 arquivos, 10MB cada)
 
 ## Participantes
 
+### POST /api/participantes/import
+
+Importa participantes via dados CSV.
+
+**Headers:**
+```
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+**Body:**
+```json
+{
+  "csvData": "id,nome,escola\n1,Ana Clara Silva,Escola Nova\n2,Bruno Santos,Colégio Central"
+}
+```
+
+**Formato CSV esperado:**
+```csv
+id,nome,escola
+1,Ana Clara Silva,Escola Nova
+2,Bruno Santos,Colégio Central
+3,Carlos Eduardo,Instituto Técnico
+```
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "message": "Importação concluída",
+  "resultado": {
+    "importados": 2,
+    "atualizados": 1,
+    "total": 3,
+    "erros": []
+  }
+}
+```
+
 ### GET /api/participantes
 
 Lista todos os participantes com paginação.
@@ -385,6 +424,46 @@ Remove um participante.
 ```
 
 ## Provas
+
+### POST /api/provas/import
+
+Importa provas via dados CSV.
+
+**Headers:**
+```
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+**Body:**
+```json
+{
+  "csvData": "prova,gabarito\n1,eaedddccaedacbbcbacb\n2,abcdeabcdeabcdeabcde",
+  "pesoQuestao": 0.50
+}
+```
+
+**Formato CSV esperado:**
+```csv
+prova,gabarito
+1,eaedddccaedacbbcbacb
+2,abcdeabcdeabcdeabcde
+3,bcdaebcdaebcdaebcdae
+```
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "message": "Importação concluída",
+  "resultado": {
+    "importadas": 2,
+    "atualizadas": 1,
+    "total": 3,
+    "erros": []
+  }
+}
+```
 
 ### GET /api/provas
 

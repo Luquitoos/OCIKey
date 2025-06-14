@@ -195,11 +195,36 @@ npm run db:init
 
 ## Como Executar
 
+### ⚠️ IMPORTANTE: Configuração Inicial do Banco de Dados
+
+**ANTES de executar o servidor pela primeira vez**, você DEVE configurar o banco de dados:
+
+```bash
+# 1. Configure o banco de dados (OBRIGATÓRIO - execute UMA VEZ)
+npm run db:setup
+
+# 2. (Opcional) Popule com dados iniciais
+npm run db:seed
+
+# 3. OU faça tudo de uma vez
+npm run db:init
+```
+
+**⚠️ Atenção**: 
+- Execute `npm run db:setup` **apenas UMA VEZ** 
+- As tabelas ficam **permanentes** no banco PostgreSQL
+- **NÃO precisa** rodar novamente a cada reinicialização
+
 ### Execução Local
 
 1. **Inicie o PostgreSQL** (se não estiver usando Docker)
 
-2. **Execute o servidor:**
+2. **Configure o banco (primeira vez apenas):**
+```bash
+npm run db:setup
+```
+
+3. **Execute o servidor:**
 ```bash
 # Desenvolvimento (com nodemon)
 npm run dev
@@ -208,7 +233,7 @@ npm run dev
 npm start
 ```
 
-3. **Verifique se está funcionando:**
+4. **Verifique se está funcionando:**
 ```bash
 curl http://localhost:5000/health
 ```
@@ -352,11 +377,59 @@ CREATE TABLE leituras (
 
 ### Scripts de Banco
 
-- `npm run db:setup` - Cria tabelas
+- `npm run db:setup` - Cria tabelas (execute UMA VEZ antes do primeiro uso)
 - `npm run db:seed` - Popula dados iniciais
 - `npm run db:init` - Setup + seed completo
 - `npm run import:participantes` - Importa CSV de participantes
 - `npm run import:provas` - Importa CSV de provas
+
+### Importação de Dados via CSV
+
+O sistema permite importar participantes e provas via arquivos CSV:
+
+#### Importar Participantes:
+```bash
+npm run import:participantes
+```
+
+**Formato do CSV** (`src/tests/exemplo-participantes.csv`):
+```csv
+id,nome,escola
+1,Ana Clara Silva,Escola Nova
+2,Bruno Santos,Colégio Central
+3,Carlos Eduardo,Instituto Técnico
+```
+
+#### Importar Provas:
+```bash
+npm run import:provas
+```
+
+**Formato do CSV** (`src/tests/exemplo-provas.csv`):
+```csv
+prova,gabarito
+1,eaedddccaedacbbcbacb
+2,abcdeabcdeabcdeabcde
+3,bcdaebcdaebcdaebcdae
+```
+
+#### Importação via API:
+
+Você também pode importar via endpoints da API:
+
+```bash
+# Importar participantes via API
+curl -X POST http://localhost:5000/api/participantes/import \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"csvData": "id,nome,escola\n1,João,Escola A\n2,Maria,Escola B"}'
+
+# Importar provas via API  
+curl -X POST http://localhost:5000/api/provas/import \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"csvData": "prova,gabarito\n1,abcdeabcde\n2,edbcaedbca", "pesoQuestao": 0.5}'
+```
 
 ## Docker
 
