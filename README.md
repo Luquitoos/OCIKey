@@ -306,8 +306,8 @@ npm start
 node src/tests/test-todas-imagens.js
 
 # Importar dados CSV (se usando banco local)
-npm run import:participantes
-npm run import:provas
+npm run import:participantes src/tests/exemplo-participantes.csv
+npm run import:provas src/tests/exemplo-provas.csv
 ```
 
 ### Execução com Docker
@@ -466,8 +466,8 @@ CREATE TABLE leituras (
 - `npm run db:setup` - Cria tabelas (execute UMA VEZ antes do primeiro uso)
 - `npm run db:seed` - Popula dados iniciais
 - `npm run db:init` - Setup + seed completo
-- `npm run import:participantes` - Importa CSV de participantes
-- `npm run import:provas` - Importa CSV de provas
+- `npm run import:participantes <arquivo.csv>` - Importa CSV de participantes
+- `npm run import:provas <arquivo.csv> [peso]` - Importa CSV de provas
 
 ### Importação de Dados via CSV
 
@@ -475,28 +475,39 @@ O sistema permite importar participantes e provas via arquivos CSV:
 
 #### Importar Participantes:
 ```bash
-npm run import:participantes
+# Usando arquivo de exemplo (já existe no projeto)
+npm run import:participantes src/tests/exemplo-participantes.csv
+
+# Usando seu próprio arquivo
+npm run import:participantes caminho/para/seu/participantes.csv
 ```
 
 **Formato do CSV** (`src/tests/exemplo-participantes.csv`):
 ```csv
 id,nome,escola
 1,Ana Clara Silva,Escola Nova
-2,Bruno Santos,Colégio Central
-3,Carlos Eduardo,Instituto Técnico
+2,João Pedro Santos,Escola Nova
+3,Maria Luiza Oliveira,Escola Nova
 ```
 
 #### Importar Provas:
 ```bash
-npm run import:provas
+# Usando arquivo de exemplo (já existe no projeto)
+npm run import:provas src/tests/exemplo-provas.csv
+
+# Usando seu próprio arquivo
+npm run import:provas caminho/para/suas/provas.csv
+
+# Com peso personalizado por questão
+npm run import:provas src/tests/exemplo-provas.csv 0.75
 ```
 
 **Formato do CSV** (`src/tests/exemplo-provas.csv`):
 ```csv
-prova,gabarito
+Prova,Gabarito
 1,eaedddccaedacbbcbacb
-2,abcdeabcdeabcdeabcde
-3,bcdaebcdaebcdaebcdae
+2,bdbbacbbaeececddbdcd
+3,abecadcbbcedccabccda
 ```
 
 #### Importação via API:
