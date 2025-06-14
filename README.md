@@ -195,9 +195,9 @@ npm run db:init
 
 ## Como Executar
 
-### ⚠️ IMPORTANTE: Configuração Inicial do Banco de Dados
+### ⚠️ IMPORTANTE: Configuração Inicial do Banco de Dados (Se estiver rodando a própria)
 
-**ANTES de executar o servidor pela primeira vez**, você DEVE configurar o banco de dados:
+**ANTES de executar o servidor pela primeira vez**, você DEVE configurar o banco de dados(o seu, o real ja ta configurado):
 
 ```bash
 # 1. Configure o banco de dados (OBRIGATÓRIO - execute UMA VEZ)
