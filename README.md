@@ -79,7 +79,7 @@ O sistema segue uma arquitetura em camadas:
 ┌─────────────────┐
 │  Addon C++      │ (Ponte Node.js ↔ Biblioteca C++)
 │  (Node-API)     │
-└────��────────────┘
+└─────────────────┘
          │
 ┌─────────────────┐
 │ Biblioteca C++  │ (Processamento de imagens)
