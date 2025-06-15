@@ -1,24 +1,42 @@
-@import "tailwindcss";
-
 :root {
   /* Cores principais do app */
   --background: #404040; /* Cinza escuro */
-  --foreground: #FFFFFF; /* Branco */
-  --brand-primary-color: #3C8D66; /* Verde */
-  --brand-primary-color-darker: #2D6A4D; /* Verde escuro */
-  --brand-secondary-color: #8F220E; /* Vermelho */
-  --brand-tertiary-color: #A36902; /* Ouro */
+  --foreground: #ffffff; /* Branco */
+  --primary: #3c8d66; /* Verde */
+  --primary-darker: #2d6a4c; /* Verde escuro */
+  --secondary: #8f220e; /* Vermelho */
+  --tertiary: #a36902; /* Ouro */
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-golos-text);
-  --font-display: var(--font-blinker);
+/* Reset do CSS feito pelo Next.js */
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
 }
 
 body {
-  background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--background);
+  font-family: var(--font-golos-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
 }
