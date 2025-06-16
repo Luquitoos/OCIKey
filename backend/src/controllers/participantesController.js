@@ -594,32 +594,47 @@ export const minhasEstatisticas = async (req, res) => {
         const userId = req.user.id;
         const { id_prova } = req.query;
         
-        // Primeiro, obter o participante do usuário
-        const { rows: participanteRows } = await pool.query(
-            'SELECT id, nome FROM participantes WHERE user_id = $1',
-            [userId]
-        );
+        // Buscar todas as leituras do usuário (incluindo cross-user)
+        // Isso inclui leituras de participantes criados automaticamente
+        const { rows: leiturasUsuario } = await pool.query(`
+            SELECT l.*, p.nome as participante_nome
+            FROM leituras l
+            JOIN participantes p ON l.id_participante = p.id
+            WHERE p.user_id = $1
+        `, [userId]);
         
-        if (participanteRows.length === 0) {
-            return res.status(404).json({ 
-                success: false,
-                error: 'Você ainda não tem um perfil de participante associado' 
+        if (leiturasUsuario.length === 0) {
+            return res.json({ 
+                success: true,
+                data: {
+                    participante: null,
+                    estatisticas_gerais: {
+                        provas_realizadas: 0,
+                        total_leituras: 0,
+                        media_notas: 0,
+                        total_acertos: 0
+                    },
+                    estatisticas_prova: null,
+                    media_geral: null,
+                    total_questoes: null
+                }
             });
         }
 
-        const participanteId = participanteRows[0].id;
-        const participanteNome = participanteRows[0].nome;
+        // Pegar o primeiro participante para informações básicas
+        const primeiroParticipante = leiturasUsuario[0];
 
-        // Estatísticas gerais
+        // Estatísticas gerais baseadas em todas as leituras do usuário
         const { rows: estatisticasGerais } = await pool.query(`
             SELECT 
-                COUNT(DISTINCT id_prova) as provas_realizadas,
+                COUNT(DISTINCT l.id_prova) as provas_realizadas,
                 COUNT(*) as total_leituras,
-                AVG(nota) as media_notas,
-                SUM(acertos) as total_acertos
-            FROM leituras 
-            WHERE id_participante = $1
-        `, [participanteId]);
+                AVG(l.nota) as media_notas,
+                SUM(l.acertos) as total_acertos
+            FROM leituras l
+            JOIN participantes p ON l.id_participante = p.id
+            WHERE p.user_id = $1
+        `, [userId]);
 
         // Se uma prova específica foi solicitada
         let estatisticasProva = null;
@@ -627,19 +642,21 @@ export const minhasEstatisticas = async (req, res) => {
         let totalQuestoes = null;
 
         if (id_prova) {
-            // Estatísticas da prova específica - pegar a melhor leitura (menor erro)
+            // Estatísticas da prova específica - pegar a melhor leitura (menor erro) do usuário
             const { rows: provaStats } = await pool.query(`
                 SELECT 
                     l.acertos,
                     l.nota,
                     l.erro,
-                    p.gabarito
+                    pr.gabarito,
+                    p.nome as participante_nome
                 FROM leituras l
-                JOIN provas p ON l.id_prova = p.id
-                WHERE l.id_participante = $1 AND l.id_prova = $2
+                JOIN provas pr ON l.id_prova = pr.id
+                JOIN participantes p ON l.id_participante = p.id
+                WHERE p.user_id = $1 AND l.id_prova = $2
                 ORDER BY l.erro ASC, l.created_at DESC
                 LIMIT 1
-            `, [participanteId, id_prova]);
+            `, [userId, id_prova]);
 
             if (provaStats.length > 0) {
                 const gabarito = provaStats[0].gabarito;
@@ -649,7 +666,8 @@ export const minhasEstatisticas = async (req, res) => {
                     acertos: provaStats[0].acertos,
                     nota: parseFloat(provaStats[0].nota),
                     total_questoes: totalQuestoes,
-                    percentual: (provaStats[0].acertos / totalQuestoes) * 100
+                    percentual: (provaStats[0].acertos / totalQuestoes) * 100,
+                    participante_nome: provaStats[0].participante_nome
                 };
 
                 // Média geral da prova (todos os participantes) - considerar melhor leitura de cada participante
@@ -678,8 +696,8 @@ export const minhasEstatisticas = async (req, res) => {
             success: true,
             data: {
                 participante: {
-                    id: participanteId,
-                    nome: participanteNome
+                    id: primeiroParticipante.id_participante,
+                    nome: primeiroParticipante.participante_nome
                 },
                 estatisticas_gerais: {
                     provas_realizadas: parseInt(estatisticasGerais[0].provas_realizadas) || 0,

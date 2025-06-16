@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
 import GabaritoDisplay from '@/components/GabaritoDisplay';
@@ -106,11 +106,14 @@ function LeiturasContent() {
     e.preventDefault();
     
     // Validar gabarito
-    const gabaritoRegex = /^[a-eA-EX\-]{20}$/;
-    if (!gabaritoRegex.test(formData.gabarito)) {
-      alert('O gabarito deve conter exatamente 20 caracteres (a-e, X para erro, - para vazio)');
+    const gabarito = formData.gabarito.toUpperCase().replace(/[^A-EX-]/g, '');
+    const gabaritoRegex = /^[A-EX-]{20}$/;
+    if (!gabaritoRegex.test(gabarito)) {
+      alert('O gabarito deve conter exatamente 20 caracteres (A-E, X para erro, - para vazio)');
       return;
     }
+    // Atualiza o formData para garantir que o valor enviado está correto (sempre minúsculo)
+    formData.gabarito = gabarito.toLowerCase();
     
     try {
       const dataToSend = {
@@ -354,7 +357,7 @@ function LeiturasContent() {
                           <GabaritoDisplay 
                             gabarito={leitura.gabarito}
                             gabaritoCorreto={leitura.prova?.gabarito}
-                            showComparison={user?.role !== 'user'}
+                            showComparison={true}
                             size="small"
                           />
                         </td>
@@ -436,22 +439,7 @@ function LeiturasContent() {
                 </div>
               )}
 
-              {/* Legenda para teachers e admins */}
-              {(user?.role === 'teacher' || user?.role === 'admin') && (
-                <div style={{ 
-                  marginTop: '1rem', 
-                  padding: '0.75rem', 
-                  backgroundColor: '#fef3c7', 
-                  borderRadius: '0.5rem',
-                  fontSize: '0.875rem'
-                }}>
-                  <strong style={{ color: '#000000' }}>Legenda do Gabarito:</strong> 
-                  <span style={{ color: '#16a34a', fontWeight: '600', marginLeft: '0.5rem' }}>Verde = Correto</span>
-                  <span style={{ color: '#dc2626', fontWeight: '600', marginLeft: '1rem' }}>Vermelho = Incorreto</span>
-                  <span style={{ color: '#f59e0b', fontWeight: '600', marginLeft: '1rem' }}>Amarelo = Erro de leitura</span>
-                </div>
-              )}
-            </>
+                          </>
           )}
         </div>
 
@@ -495,12 +483,17 @@ function LeiturasContent() {
                 <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.5rem 0' }}>
                   <strong>Status Original:</strong> {getErrorMessage(editingLeitura.erro)}
                 </p>
-                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
-                  <strong>Gabarito Original:</strong> 
-                  <span style={{ fontFamily: 'monospace', marginLeft: '0.5rem' }}>
-                    {formatGabarito(editingLeitura.gabarito, editingLeitura.prova?.gabarito, user?.role)}
-                  </span>
-                </p>
+                <div style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
+                  <strong>Gabarito Original:</strong>
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <GabaritoDisplay 
+                      gabarito={editingLeitura.gabarito}
+                      gabaritoCorreto={editingLeitura.prova?.gabarito}
+                      showComparison={true}
+                      size="small"
+                    />
+                  </div>
+                </div>
               </div>
               
               <form onSubmit={handleSubmit} className={styles.form}>

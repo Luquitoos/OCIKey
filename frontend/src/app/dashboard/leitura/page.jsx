@@ -11,6 +11,8 @@ import {
   XMarkIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
+  PencilIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
 import styles from '@/components/styles/dashboard.module.css';
 
@@ -99,6 +101,28 @@ export default function LeituraPage() {
   const formatNota = (nota) => {
     const num = parseFloat(nota);
     return isNaN(num) ? '0.00' : num.toFixed(2);
+  };
+
+  const handleEditLeitura = (leituraId) => {
+    window.location.href = `/dashboard/leituras?edit=${leituraId}`;
+  };
+
+  const handleDeleteLeitura = async (leituraId, fileName) => {
+    if (!confirm(`Tem certeza que deseja excluir a leitura de "${fileName}"?`)) {
+      return;
+    }
+
+    try {
+      await apiService.deleteLeitura(leituraId);
+      
+      // Remove o resultado da lista local
+      setResults(prev => prev.filter(result => result.leitura?.id !== leituraId));
+      
+      alert('Leitura excluída com sucesso!');
+    } catch (error) {
+      console.error('Erro ao excluir leitura:', error);
+      alert('Erro ao excluir leitura: ' + error.message);
+    }
   };
 
   
@@ -243,9 +267,21 @@ export default function LeituraPage() {
                       ) : (
                         <ExclamationTriangleIcon style={{ width: '1.5rem', height: '1.5rem', color: '#dc2626' }} />
                       )}
-                      <h3 style={{ fontSize: '1.125rem', fontWeight: '600', margin: 0, color: 'var(--background)' }}>
-                        {result.arquivo_original}
-                      </h3>
+                      <div style={{ flex: 1 }}>
+                        <h3 style={{ fontSize: '1.125rem', fontWeight: '600', margin: 0, color: 'var(--background)' }}>
+                          {result.arquivo_original}
+                        </h3>
+                        {result.participante_original && result.participante_original.user_id && (
+                          <p style={{ 
+                            fontSize: '0.75rem', 
+                            color: '#6b7280', 
+                            margin: '0.25rem 0 0 0',
+                            fontStyle: 'italic'
+                          }}>
+                            📋 Leitura cross-user: dados preservados do participante original
+                          </p>
+                        )}
+                      </div>
                     </div>
                     
                     {result.leitura && (
@@ -275,6 +311,16 @@ export default function LeituraPage() {
                           <p style={{ margin: 0, color: 'var(--background)' }}>
                             {result.leitura.id_participante > 0 ? `ID: ${result.leitura.id_participante}` : 'Não identificado'}
                           </p>
+                          {result.participante_original && result.participante_original.user_id !== result.leitura.id_participante && (
+                            <p style={{ 
+                              margin: '0.25rem 0 0 0', 
+                              fontSize: '0.75rem', 
+                              color: '#6b7280',
+                              fontStyle: 'italic'
+                            }}>
+                              Dados originais: {result.participante_original.nome} ({result.participante_original.escola})
+                            </p>
+                          )}
                         </div>
                         
                         <div>
@@ -316,15 +362,43 @@ export default function LeituraPage() {
                       </div>
                     )}
                     
-                    {result.leitura?.erro > 0 && (
-                      <div style={{ marginTop: '1rem' }}>
-                        <a 
-                          href={`/dashboard/leituras?edit=${result.leitura.id}`}
+                    {result.leitura && (
+                      <div style={{ 
+                        marginTop: '1.5rem', 
+                        display: 'flex', 
+                        gap: '1rem', 
+                        paddingTop: '1rem',
+                        borderTop: '1px solid #e5e7eb'
+                      }}>
+                        <button
+                          onClick={() => handleEditLeitura(result.leitura.id)}
                           className={`${styles.button} ${styles.buttonSecondary}`}
-                          style={{ fontSize: '0.875rem' }}
+                          style={{ 
+                            fontSize: '0.875rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem'
+                          }}
                         >
+                          <PencilIcon style={{ width: '1rem', height: '1rem' }} />
                           Editar Leitura
-                        </a>
+                        </button>
+                        
+                        <button
+                          onClick={() => handleDeleteLeitura(result.leitura.id, result.arquivo_original)}
+                          className={`${styles.button} ${styles.buttonOutline}`}
+                          style={{ 
+                            fontSize: '0.875rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            color: '#dc2626',
+                            borderColor: '#dc2626'
+                          }}
+                        >
+                          <TrashIcon style={{ width: '1rem', height: '1rem' }} />
+                          Excluir Leitura
+                        </button>
                       </div>
                     )}
                   </div>

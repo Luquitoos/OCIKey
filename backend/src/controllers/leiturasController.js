@@ -1,7 +1,7 @@
 import { pool } from '../config/database-config.js';
 
 // Listar leituras (filtradas baseado no role do usuário)
-export const listarLeituras = async (req, res) => {
+async function listarLeituras(req, res) {
     try {
         const { 
             page = 1, 
@@ -30,50 +30,40 @@ export const listarLeituras = async (req, res) => {
         let params = [];
         let whereConditions = [];
 
-        // Parâmetro 'meus' força filtro por usuário independente do role
         if (meus === 'true') {
             whereConditions.push(`p.user_id = $${params.length + 1}`);
             params.push(userId);
         } else {
-            // Aplicar filtros baseados no role do usuário
             if (userRole === 'admin') {
-                // Admin vê tudo - sem filtros adicionais
+                // Admin vê tudo
             } else if (userRole === 'teacher') {
-                // Teacher vê apenas leituras de participantes da mesma escola
                 if (userEscola) {
                     whereConditions.push(`p.escola = $${params.length + 1}`);
                     params.push(userEscola);
                 } else {
-                    // Se teacher não tem escola definida, não vê nada
-                    whereConditions.push('1 = 0'); // Condição que nunca é verdadeira
+                    whereConditions.push('1 = 0');
                 }
             } else {
-                // User comum vê apenas leituras dos seus participantes
-                whereConditions.push(`p.user_id = $${params.length + 1}`);
-                params.push(userId);
+                // User comum vê leituras dos seus participantes OU leituras sem participante que ele criou
+                whereConditions.push(`(p.user_id = $${params.length + 1} OR (l.user_id = $${params.length + 2} AND l.id_participante IS NULL))`);
+                params.push(userId, userId);
             }
         }
 
-        // Filtros opcionais
         if (id_prova) {
             whereConditions.push(`l.id_prova = $${params.length + 1}`);
             params.push(id_prova);
         }
-
         if (id_participante) {
             whereConditions.push(`l.id_participante = $${params.length + 1}`);
             params.push(id_participante);
         }
-
         if (erro !== undefined) {
             whereConditions.push(`l.erro = $${params.length + 1}`);
             params.push(erro);
         }
 
-        // Monta WHERE clause
         const whereClause = whereConditions.length > 0 ? ' WHERE ' + whereConditions.join(' AND ') : '';
-
-        // Paginação
         const offset = (page - 1) * limit;
         const orderClause = ' ORDER BY l.created_at DESC';
         const limitClause = ` LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
@@ -82,17 +72,15 @@ export const listarLeituras = async (req, res) => {
         const finalQuery = query + whereClause + orderClause + limitClause;
         const { rows } = await pool.query(finalQuery, params);
 
-        // Conta total para paginação
         const countQuery = `
             SELECT COUNT(*) 
             FROM leituras l
             LEFT JOIN participantes p ON l.id_participante = p.id
         ` + whereClause;
-        const countParams = params.slice(0, -2); // Remove limit e offset
+        const countParams = params.slice(0, -2);
         const { rows: countRows } = await pool.query(countQuery, countParams);
         const total = parseInt(countRows[0].count);
 
-        // Formata os dados de resposta
         const leituras = rows.map(row => ({
             id: row.id,
             arquivo: row.arquivo,
@@ -129,10 +117,9 @@ export const listarLeituras = async (req, res) => {
         console.error('Erro ao listar leituras:', error);
         res.status(500).json({ error: 'Erro interno ao listar leituras' });
     }
-};
+}
 
-// Obter uma leitura específica
-export const obterLeitura = async (req, res) => {
+async function obterLeitura(req, res) {
     try {
         const { id } = req.params;
         const userId = req.user.id;
@@ -157,22 +144,18 @@ export const obterLeitura = async (req, res) => {
         
         let params = [id];
 
-        // Aplicar filtros baseados no role
         if (userRole === 'admin') {
             // Admin pode ver qualquer leitura - sem filtros adicionais
         } else if (userRole === 'teacher') {
-            // Teacher só pode ver leituras de participantes da mesma escola
             if (userEscola) {
                 query += ' AND p.escola = $2';
                 params.push(userEscola);
             } else {
-                // Se teacher não tem escola, não pode ver nada
                 query += ' AND 1 = 0';
             }
         } else {
-            // User só pode ver leituras dos seus participantes
-            query += ' AND p.user_id = $2';
-            params.push(userId);
+            query += ' AND (p.user_id = $2 OR (l.user_id = $3 AND l.id_participante IS NULL))';
+            params.push(userId, userId);
         }
 
         const { rows } = await pool.query(query, params);
@@ -212,10 +195,9 @@ export const obterLeitura = async (req, res) => {
         console.error('Erro ao obter leitura:', error);
         res.status(500).json({ error: 'Erro interno ao obter leitura' });
     }
-};
+}
 
-// Editar uma leitura (permite correção manual)
-export const editarLeitura = async (req, res) => {
+async function editarLeitura(req, res) {
     try {
         const { id } = req.params;
         const { id_prova, id_participante, gabarito } = req.body;
@@ -227,7 +209,6 @@ export const editarLeitura = async (req, res) => {
             return res.status(400).json({ error: 'ID da leitura deve ser um número' });
         }
 
-        // Verifica se a leitura existe e se o usuário tem permissão
         let checkQuery = `
             SELECT l.id, l.id_participante, p.user_id, p.escola 
             FROM leituras l
@@ -236,22 +217,18 @@ export const editarLeitura = async (req, res) => {
         `;
         let checkParams = [id];
 
-        // Aplicar filtros baseados no role
         if (userRole === 'admin') {
             // Admin pode editar qualquer leitura - sem filtros adicionais
         } else if (userRole === 'teacher') {
-            // Teacher só pode editar leituras de participantes da mesma escola
             if (userEscola) {
                 checkQuery += ' AND p.escola = $2';
                 checkParams.push(userEscola);
             } else {
-                // Se teacher não tem escola, não pode editar nada
                 checkQuery += ' AND 1 = 0';
             }
         } else {
-            // User só pode editar leituras dos seus participantes
-            checkQuery += ' AND p.user_id = $2';
-            checkParams.push(userId);
+            checkQuery += ' AND (p.user_id = $2 OR (l.user_id = $3 AND l.id_participante IS NULL))';
+            checkParams.push(userId, userId);
         }
 
         const { rows: checkRows } = await pool.query(checkQuery, checkParams);
@@ -260,12 +237,10 @@ export const editarLeitura = async (req, res) => {
             return res.status(404).json({ error: 'Leitura não encontrada ou sem permissão' });
         }
 
-        // Recalcula acertos e nota se necessário
         let acertos = null;
         let nota = null;
 
         if (id_prova && gabarito) {
-            // Busca o peso da questão da prova
             const { rows: provaRows } = await pool.query(
                 'SELECT peso_questao FROM provas WHERE id = $1',
                 [id_prova]
@@ -275,7 +250,6 @@ export const editarLeitura = async (req, res) => {
                 const peso_questao = provaRows[0].peso_questao;
                 acertos = 0;
 
-                // Recalcula acertos
                 const { rows: gabaritoRows } = await pool.query(
                     'SELECT gabarito FROM provas WHERE id = $1',
                     [id_prova]
@@ -298,7 +272,6 @@ export const editarLeitura = async (req, res) => {
             }
         }
 
-        // Monta a query de atualização dinamicamente
         const campos = [];
         const valores = [];
         let contador = 1;
@@ -350,10 +323,9 @@ export const editarLeitura = async (req, res) => {
         console.error('Erro ao editar leitura:', error);
         res.status(500).json({ error: 'Erro interno ao editar leitura' });
     }
-};
+}
 
-// Deletar uma leitura
-export const deletarLeitura = async (req, res) => {
+async function deletarLeitura(req, res) {
     try {
         const { id } = req.params;
         const userId = req.user.id;
@@ -364,15 +336,12 @@ export const deletarLeitura = async (req, res) => {
             return res.status(400).json({ error: 'ID da leitura deve ser um número' });
         }
 
-        // Verifica permissão antes de deletar
         let deleteQuery = `DELETE FROM leituras WHERE id = $1`;
         let deleteParams = [id];
 
-        // Aplicar filtros baseados no role
         if (userRole === 'admin') {
             // Admin pode deletar qualquer leitura - sem filtros adicionais
         } else if (userRole === 'teacher') {
-            // Teacher só pode deletar leituras de participantes da mesma escola
             if (userEscola) {
                 deleteQuery = `
                     DELETE FROM leituras 
@@ -382,18 +351,17 @@ export const deletarLeitura = async (req, res) => {
                 `;
                 deleteParams.push(userEscola);
             } else {
-                // Se teacher não tem escola, não pode deletar nada
                 deleteQuery = `DELETE FROM leituras WHERE id = $1 AND 1 = 0`;
             }
         } else {
-            // User só pode deletar leituras dos seus participantes
             deleteQuery = `
                 DELETE FROM leituras 
-                WHERE id = $1 AND id_participante IN (
-                    SELECT id FROM participantes WHERE user_id = $2
+                WHERE id = $1 AND (
+                    id_participante IN (SELECT id FROM participantes WHERE user_id = $2)
+                    OR (user_id = $3 AND id_participante IS NULL)
                 )
             `;
-            deleteParams.push(userId);
+            deleteParams.push(userId, userId);
         }
 
         deleteQuery += ' RETURNING *';
@@ -415,10 +383,9 @@ export const deletarLeitura = async (req, res) => {
         console.error('Erro ao deletar leitura:', error);
         res.status(500).json({ error: 'Erro interno ao deletar leitura' });
     }
-};
+}
 
-// Obter estatísticas das leituras do usuário
-export const estatisticasLeituras = async (req, res) => {
+async function estatisticasLeituras(req, res) {
     try {
         const userId = req.user.id;
         const userRole = req.user.role;
@@ -427,20 +394,16 @@ export const estatisticasLeituras = async (req, res) => {
         let whereClause = '';
         let params = [];
 
-        // Aplicar filtros baseados no role
         if (userRole === 'admin') {
             // Admin vê estatísticas de tudo - sem filtros
         } else if (userRole === 'teacher') {
-            // Teacher vê estatísticas de participantes da mesma escola
             if (userEscola) {
                 whereClause = 'WHERE p.escola = $1';
                 params.push(userEscola);
             } else {
-                // Se teacher não tem escola, não vê nada
                 whereClause = 'WHERE 1 = 0';
             }
         } else {
-            // User vê estatísticas dos seus participantes
             whereClause = 'WHERE p.user_id = $1';
             params.push(userId);
         }
@@ -458,21 +421,18 @@ export const estatisticasLeituras = async (req, res) => {
             ${whereClause}
         `;
 
-        // Participantes únicos
         const queryParticipantes = `
             SELECT COUNT(DISTINCT l.id_participante) as participantes_unicos
             FROM leituras l
             LEFT JOIN participantes p ON l.id_participante = p.id
             ${whereClause}
         `;
-        // Provas distintas
         const queryProvas = `
             SELECT COUNT(DISTINCT l.id_prova) as provas_distintas
             FROM leituras l
             LEFT JOIN participantes p ON l.id_participante = p.id
             ${whereClause}
         `;
-        // Prova com melhor média
         const queryMelhorProva = `
             SELECT l.id_prova, AVG(l.nota) as media
             FROM leituras l
@@ -482,7 +442,6 @@ export const estatisticasLeituras = async (req, res) => {
             ORDER BY media DESC
             LIMIT 1
         `;
-        // Moda das notas
         const queryModaNota = `
             SELECT l.nota, COUNT(*) as freq
             FROM leituras l
@@ -533,4 +492,12 @@ export const estatisticasLeituras = async (req, res) => {
         console.error('Erro ao obter estatísticas:', error);
         res.status(500).json({ error: 'Erro interno ao obter estatísticas' });
     }
+}
+
+export {
+    listarLeituras,
+    obterLeitura,
+    editarLeitura,
+    deletarLeitura,
+    estatisticasLeituras
 };

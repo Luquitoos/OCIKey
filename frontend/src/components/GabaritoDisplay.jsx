@@ -16,23 +16,27 @@ export default function GabaritoDisplay({
     // Se for comparação e temos gabarito correto
     if (showComparison && gabaritoCorreto) {
       const charCorreto = gabaritoCorreto[index];
+      
       if (char === charCorreto && char !== 'X' && char !== '-') {
-        backgroundColor = '#dcfce7'; // verde claro
+        // Resposta correta - circunferência verde
+        backgroundColor = '#ffffff';
         borderColor = '#16a34a'; // verde
-        textColor = '#16a34a';
+        textColor = '#000000';
       } else if (char === 'X' || char === '-') {
-        backgroundColor = '#fef2f2'; // vermelho claro
-        borderColor = '#dc2626'; // vermelho
-        textColor = '#dc2626';
+        // Erro de leitura - circunferência cinza
+        backgroundColor = '#ffffff';
+        borderColor = '#6b7280'; // cinza
+        textColor = '#6b7280';
       } else {
-        backgroundColor = '#fef2f2'; // vermelho claro para incorretas
+        // Resposta incorreta - circunferência vermelha
+        backgroundColor = '#ffffff';
         borderColor = '#dc2626'; // vermelho
-        textColor = '#dc2626';
+        textColor = '#000000';
       }
     } else {
       // Estilo padrão sem comparação
       if (char === 'X' || char === '-') {
-        backgroundColor = '#f3f4f6'; // cinza claro
+        backgroundColor = '#ffffff';
         borderColor = '#6b7280'; // cinza
         textColor = '#6b7280';
       }
