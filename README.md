@@ -125,7 +125,7 @@ O sistema segue uma arquitetura em camadas:
 ### Integração C++
 - **Node-API (N-API)** - Interface Node.js ↔ C++
 - **node-gyp** - Compilação de módulos nativos
-- **bindings** - Carregamento de m��dulos nativos
+- **bindings** - Carregamento de módulos nativos
 
 ### DevOps
 - **Docker** - Containerização
