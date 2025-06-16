@@ -20,14 +20,14 @@ async function testeLeiturasSemParticipante() {
 
         console.log('   Colunas da tabela leituras:');
         colunas.forEach(col => {
-            console.log(`   → ${col.column_name}: ${col.data_type} (${col.is_nullable === 'YES' ? 'NULL' : 'NOT NULL'})`);
+            console.log(`${col.column_name}: ${col.data_type} (${col.is_nullable === 'YES' ? 'NULL' : 'NOT NULL'})`);
         });
 
         const temUserIdColumn = colunas.some(col => col.column_name === 'user_id');
         if (temUserIdColumn) {
-            console.log('   ✅ Coluna user_id encontrada!');
+            console.log('Coluna user_id encontrada!');
         } else {
-            console.log('   ❌ Coluna user_id não encontrada!');
+            console.log('Coluna user_id não encontrada!');
             return;
         }
 
@@ -43,7 +43,7 @@ async function testeLeiturasSemParticipante() {
 
         console.log(`   Encontradas ${leiturasSemParticipante.length} leituras sem participante:`);
         leiturasSemParticipante.forEach(l => {
-            console.log(`   → ID: ${l.id}, Arquivo: ${l.arquivo}, Erro: ${l.erro}, User: ${l.username || 'NULL'}`);
+            console.log(`ID: ${l.id}, Arquivo: ${l.arquivo}, Erro: ${l.erro}, User: ${l.username || 'NULL'}`);
         });
 
         // 3. Simular processamento de uma imagem base.png
@@ -52,12 +52,12 @@ async function testeLeiturasSemParticipante() {
         // Buscar um usuário para teste
         const { rows: usuarios } = await pool.query('SELECT id, username FROM users WHERE role = \'user\' LIMIT 1');
         if (usuarios.length === 0) {
-            console.log('   ❌ Nenhum usuário encontrado para teste');
+            console.log('Nenhum usuário encontrado para teste');
             return;
         }
 
         const usuarioTeste = usuarios[0];
-        console.log(`   Usando usuário: ${usuarioTeste.username} (ID: ${usuarioTeste.id})`);
+        console.log(`Usando usuário: ${usuarioTeste.username} (ID: ${usuarioTeste.id})`);
 
         // Simular dados de leitura da base.png
         const mockLeituraBase = {
@@ -67,11 +67,11 @@ async function testeLeiturasSemParticipante() {
             leitura: '--------------------' // 20 caracteres vazios
         };
 
-        console.log('   Dados simulados da base.png:');
-        console.log(`   → Erro: ${mockLeituraBase.erro}`);
-        console.log(`   → ID Prova: ${mockLeituraBase.id_prova}`);
-        console.log(`   → ID Participante: ${mockLeituraBase.id_participante}`);
-        console.log(`   → Leitura: ${mockLeituraBase.leitura}`);
+        console.log('Dados simulados da base.png:');
+        console.log(`Erro: ${mockLeituraBase.erro}`);
+        console.log(`ID Prova: ${mockLeituraBase.id_prova}`);
+        console.log(`ID Participante: ${mockLeituraBase.id_participante}`);
+        console.log(`Leitura: ${mockLeituraBase.leitura}`);
 
         // Simular função Acertos
         let acertos = 0;
@@ -80,15 +80,15 @@ async function testeLeiturasSemParticipante() {
         if (mockLeituraBase.id_prova === -1 || mockLeituraBase.id_prova === 0) {
             acertos = 0;
             nota = 0.00;
-            console.log('   → Acertos calculados: 0 (prova não identificada)');
-            console.log('   → Nota calculada: 0.00');
+            console.log('Acertos calculados: 0 (prova não identificada)');
+            console.log('Nota calculada: 0.00');
         }
 
         // Simular salvamento no banco
         let participanteId = null;
         if (mockLeituraBase.id_participante === -1) {
             participanteId = null;
-            console.log('   → Participante: NULL (não identificado)');
+            console.log('Participante: NULL (não identificado)');
         }
 
         let idProvaParaSalvar = mockLeituraBase.id_prova;
@@ -98,7 +98,7 @@ async function testeLeiturasSemParticipante() {
             idProvaParaSalvar = 0;
         }
 
-        console.log(`   → ID Prova para salvar: ${idProvaParaSalvar}`);
+        console.log(`ID Prova para salvar: ${idProvaParaSalvar}`);
 
         // Inserir leitura de teste
         const { rows: novaLeitura } = await pool.query(`
@@ -116,10 +116,10 @@ async function testeLeiturasSemParticipante() {
             usuarioTeste.id
         ]);
 
-        console.log('   ✅ Leitura de teste inserida:');
-        console.log(`   → ID: ${novaLeitura[0].id}`);
-        console.log(`   → Arquivo: ${novaLeitura[0].arquivo}`);
-        console.log(`   → User ID: ${novaLeitura[0].user_id}`);
+        console.log('Leitura de teste inserida:');
+        console.log(`ID: ${novaLeitura[0].id}`);
+        console.log(`Arquivo: ${novaLeitura[0].arquivo}`);
+        console.log(`User ID: ${novaLeitura[0].user_id}`);
 
         // 4. Testar query de listagem para usuário comum
         console.log('\n4. Testando query de listagem para usuário comum...');
@@ -148,39 +148,39 @@ async function testeLeiturasSemParticipante() {
         const whereClause = whereConditions.length > 0 ? ' WHERE ' + whereConditions.join(' AND ') : '';
         const finalQuery = query + whereClause + ' ORDER BY l.created_at DESC';
 
-        console.log('   Query executada:');
-        console.log(`   ${finalQuery}`);
-        console.log(`   Parâmetros: [${params.join(', ')}]`);
+        console.log('Query executada:');
+        console.log(`${finalQuery}`);
+        console.log(`Parâmetros: [${params.join(', ')}]`);
 
         const { rows: leiturasUsuario } = await pool.query(finalQuery, params);
         
-        console.log(`   ✅ Encontradas ${leiturasUsuario.length} leituras para o usuário:`);
+        console.log(`Encontradas ${leiturasUsuario.length} leituras para o usuário:`);
         leiturasUsuario.forEach(l => {
             const participante = l.participante_nome || 'SEM PARTICIPANTE';
             const prova = l.id_prova || 'SEM PROVA';
-            console.log(`   → ID: ${l.id}, Arquivo: ${l.arquivo}, Participante: ${participante}, Prova: ${prova}`);
+            console.log(`ID: ${l.id}, Arquivo: ${l.arquivo}, Participante: ${participante}, Prova: ${prova}`);
         });
 
         // Verificar se a leitura de teste aparece
         const leituraTestEncontrada = leiturasUsuario.find(l => l.arquivo === 'test_base.png');
         if (leituraTestEncontrada) {
-            console.log('   ✅ Leitura de teste encontrada na listagem!');
+            console.log('Leitura de teste encontrada na listagem!');
         } else {
-            console.log('   ❌ Leitura de teste NÃO encontrada na listagem!');
+            console.log('Leitura de teste NÃO encontrada na listagem!');
         }
 
         // 5. Limpar dados de teste
         console.log('\n5. Limpando dados de teste...');
         await pool.query('DELETE FROM leituras WHERE arquivo = $1', ['test_base.png']);
-        console.log('   ✅ Dados de teste removidos.');
+        console.log('Dados de teste removidos.');
 
         console.log('\n=== TESTE CONCLUÍDO ===');
-        console.log('\n📋 Resumo das correções:');
-        console.log('   ✅ Coluna user_id adicionada à tabela leituras');
-        console.log('   ✅ Função Acertos modificada para não lançar erro com id_prova = 0');
-        console.log('   ✅ Leituras são salvas com user_id do criador');
-        console.log('   ✅ Query de listagem inclui leituras sem participante do usuário');
-        console.log('   ✅ Leituras como base.png agora aparecem na lista');
+        console.log('\nResumo das correções:');
+        console.log('Coluna user_id adicionada à tabela leituras');
+        console.log('Função Acertos modificada para não lançar erro com id_prova = 0');
+        console.log('Leituras são salvas com user_id do criador');
+        console.log('Query de listagem inclui leituras sem participante do usuário');
+        console.log('Leituras como base.png agora aparecem na lista');
 
     } catch (error) {
         console.error('Erro durante o teste:', error);

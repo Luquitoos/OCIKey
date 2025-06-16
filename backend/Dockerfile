@@ -1,5 +1,5 @@
 # Imagem base Node.js Alpine
-FROM node:18-alpine
+FROM node:18-alpine AS base
 
 # Instala dependências de build para módulos nativos C++
 # python3: necessário para node-gyp
@@ -24,8 +24,26 @@ COPY . .
 # Necessário para integração com biblioteca de leitura de gabarito
 RUN npm run build
 
-# Define variáveis de ambiente necessárias
+# Stage de desenvolvimento
+FROM base AS development
 ENV NODE_ENV=development
+ENV PORT=5000
+ENV LD_LIBRARY_PATH=/app/biblioteca:$LD_LIBRARY_PATH
+
+# Instala nodemon para desenvolvimento
+RUN npm install -g nodemon
+
+EXPOSE 5000
+CMD ["npm", "run", "dev"]
+
+# Stage de produção
+FROM base AS production
+
+# Remove dependências de desenvolvimento para reduzir tamanho
+RUN npm prune --production
+
+# Define variáveis de ambiente necessárias
+ENV NODE_ENV=production
 ENV PORT=5000
 ENV LD_LIBRARY_PATH=/app/biblioteca:$LD_LIBRARY_PATH
 

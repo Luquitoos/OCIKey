@@ -12,12 +12,12 @@ async function testDiferentesImagens() {
         
         try {
             const leitura = readImagePath(imagePath);
-            console.log(`  Erro: ${leitura.erro}`);
-            console.log(`  ID Prova: ${leitura.id_prova}`);
-            console.log(`  ID Participante: ${leitura.id_participante}`);
-            console.log(`  Leitura: ${leitura.leitura}`);
+            console.log(`Erro: ${leitura.erro}`);
+            console.log(`ID Prova: ${leitura.id_prova}`);
+            console.log(`ID Participante: ${leitura.id_participante}`);
+            console.log(`Leitura: ${leitura.leitura}`);
         } catch (error) {
-            console.log(`  ERRO: ${error.message}`);
+            console.log(`ERRO: ${error.message}`);
         }
     }
 }

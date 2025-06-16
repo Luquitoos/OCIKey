@@ -21,7 +21,7 @@ async function testeInterfaceLeitura() {
 
         console.log(`   Encontradas ${leituras.rows.length} leituras recentes:`);
         leituras.rows.forEach(l => {
-            console.log(`   → ID: ${l.id}, Arquivo: ${l.arquivo}, Participante: ${l.nome || 'N/A'}, User: ${l.user_id || 'N/A'}`);
+            console.log(`ID: ${l.id}, Arquivo: ${l.arquivo}, Participante: ${l.nome || 'N/A'}, User: ${l.user_id || 'N/A'}`);
         });
 
         // 2. Verificar estrutura da resposta da API de leitura
@@ -29,18 +29,18 @@ async function testeInterfaceLeitura() {
         
         if (leituras.rows.length > 0) {
             const leitura = leituras.rows[0];
-            console.log('   Estrutura da leitura:');
-            console.log(`   → ID: ${leitura.id}`);
-            console.log(`   → Arquivo: ${leitura.arquivo}`);
-            console.log(`   → Erro: ${leitura.erro}`);
-            console.log(`   → ID Prova: ${leitura.id_prova}`);
-            console.log(`   → ID Participante: ${leitura.id_participante}`);
-            console.log(`   → Gabarito: ${leitura.gabarito}`);
-            console.log(`   → Acertos: ${leitura.acertos}`);
-            console.log(`   → Nota: ${leitura.nota}`);
-            console.log(`   → Participante Nome: ${leitura.nome}`);
-            console.log(`   → Participante Escola: ${leitura.escola}`);
-            console.log(`   → User ID: ${leitura.user_id}`);
+            console.log('Estrutura da leitura:');
+            console.log(`ID: ${leitura.id}`);
+            console.log(`Arquivo: ${leitura.arquivo}`);
+            console.log(`Erro: ${leitura.erro}`);
+            console.log(`ID Prova: ${leitura.id_prova}`);
+            console.log(`ID Participante: ${leitura.id_participante}`);
+            console.log(`Gabarito: ${leitura.gabarito}`);
+            console.log(`Acertos: ${leitura.acertos}`);
+            console.log(`Nota: ${leitura.nota}`);
+            console.log(`Participante Nome: ${leitura.nome}`);
+            console.log(`Participante Escola: ${leitura.escola}`);
+            console.log(`User ID: ${leitura.user_id}`);
         }
 
         // 3. Verificar se existem casos de cross-user
@@ -67,7 +67,7 @@ async function testeInterfaceLeitura() {
         if (crossUserCheck.rows.length > 0) {
             console.log(`   Encontrados ${crossUserCheck.rows.length} possíveis casos de cross-user:`);
             crossUserCheck.rows.forEach(c => {
-                console.log(`   → Leitura ID: ${c.id}, Participante: ${c.participante_atual}, User: ${c.user_atual}`);
+                console.log(`Leitura ID: ${c.id}, Participante: ${c.participante_atual}, User: ${c.user_atual}`);
             });
         } else {
             console.log('   Nenhum caso de cross-user detectado.');
@@ -79,7 +79,7 @@ async function testeInterfaceLeitura() {
         
         console.log(`   Usuários no sistema: ${usuarios.rows.length}`);
         usuarios.rows.forEach(u => {
-            console.log(`   → ID: ${u.id}, Username: ${u.username}, Role: ${u.role}`);
+            console.log(`ID: ${u.id}, Username: ${u.username}, Role: ${u.role}`);
         });
 
         // 5. Simular operações de edição
@@ -97,9 +97,9 @@ async function testeInterfaceLeitura() {
                 RETURNING *
             `;
             
-            console.log('   → Query de atualização preparada (não executada)');
-            console.log(`   → Gabarito atual: ${leituraParaTeste.gabarito}`);
-            console.log('   → Operação de edição seria possível');
+            console.log('Query de atualização preparada (não executada)');
+            console.log(`Gabarito atual: ${leituraParaTeste.gabarito}`);
+            console.log('Operação de edição seria possível');
         }
 
         // 6. Verificar integridade dos dados
@@ -115,10 +115,10 @@ async function testeInterfaceLeitura() {
         `);
 
         const stats = integrityCheck.rows[0];
-        console.log(`   Total de leituras: ${stats.total_leituras}`);
-        console.log(`   Com participante: ${stats.com_participante}`);
-        console.log(`   Com prova: ${stats.com_prova}`);
-        console.log(`   Com gabarito: ${stats.com_gabarito}`);
+        console.log(`Total de leituras: ${stats.total_leituras}`);
+        console.log(`Com participante: ${stats.com_participante}`);
+        console.log(`Com prova: ${stats.com_prova}`);
+        console.log(`Com gabarito: ${stats.com_gabarito}`);
 
         // 7. Verificar estrutura das tabelas
         console.log('\n7. Verificando estrutura das tabelas...');
@@ -130,19 +130,19 @@ async function testeInterfaceLeitura() {
             ORDER BY ordinal_position
         `);
 
-        console.log('   Estrutura da tabela leituras:');
+        console.log('Estrutura da tabela leituras:');
         tableStructure.rows.forEach(col => {
-            console.log(`   → ${col.column_name}: ${col.data_type} (${col.is_nullable === 'YES' ? 'NULL' : 'NOT NULL'})`);
+            console.log(`${col.column_name}: ${col.data_type} (${col.is_nullable === 'YES' ? 'NULL' : 'NOT NULL'})`);
         });
 
         console.log('\n=== TESTE DA INTERFACE CONCLUÍDO ===');
-        console.log('\n✅ Funcionalidades verificadas:');
-        console.log('   → Estrutura de dados das leituras');
-        console.log('   → Relacionamentos com participantes');
-        console.log('   → Casos de cross-user');
-        console.log('   → Permissões de usuários');
-        console.log('   → Integridade dos dados');
-        console.log('   → Estrutura das tabelas');
+        console.log('\nFuncionalidades verificadas:');
+        console.log('Estrutura de dados das leituras');
+        console.log('Relacionamentos com participantes');
+        console.log('Casos de cross-user');
+        console.log('Permissões de usuários');
+        console.log('Integridade dos dados');
+        console.log('Estrutura das tabelas');
 
         console.log('\n📋 Próximos passos para teste manual:');
         console.log('   1. Fazer upload de uma imagem na interface');

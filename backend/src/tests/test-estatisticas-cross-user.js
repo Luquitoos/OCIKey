@@ -18,7 +18,7 @@ async function testeEstatisticasCrossUser() {
         });
 
         if (usuarios.rows.length === 0) {
-            console.log('   ❌ Nenhum usuário encontrado. Criando usuário de teste...');
+            console.log('Nenhum usuário encontrado. Criando usuário de teste...');
             
             const novoUsuario = await pool.query(`
                 INSERT INTO users (username, email, password, role) 

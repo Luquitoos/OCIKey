@@ -104,9 +104,9 @@ async function testeLeituraCrossUser() {
                     // Se o participante da leitura pertence ao usuário atual, usa normalmente
                     if (participanteOriginal.user_id === userId) {
                         participanteId = leitura.id_participante;
-                        console.log(`   → Participante pertence ao usuário atual, usando ID original: ${participanteId}`);
+                        console.log(`Participante pertence ao usuário atual, usando ID original: ${participanteId}`);
                     } else {
-                        console.log(`   → Participante pertence a outro usuário, criando/encontrando cópia...`);
+                        console.log(`Participante pertence a outro usuário, criando/encontrando cópia...`);
                         
                         // Se o participante da leitura pertence a outro usuário,
                         // cria ou encontra um participante com o mesmo nome e escola para o usuário atual
@@ -155,7 +155,7 @@ async function testeLeituraCrossUser() {
         }
 
         // Cenário 1: Usuário B faz leitura de prova do participante A
-        console.log('\n   Cenário 1: Usuário B lê prova do participante A');
+        console.log('\n Cenário 1: Usuário B lê prova do participante A');
         const mockLeituraA = {
             erro: 0,
             id_prova: provaId,
@@ -164,9 +164,9 @@ async function testeLeituraCrossUser() {
         };
 
         const resultadoB = await simularProcessarUmaLeitura('test_prova_A.png', userBId, mockLeituraA);
-        console.log(`   → Leitura salva com ID: ${resultadoB.leitura.id}`);
-        console.log(`   → Participante na leitura: ${resultadoB.leitura.id_participante}`);
-        console.log(`   → Participante original: ${resultadoB.participante_original.nome} (ID: ${resultadoB.participante_original.id})`);
+        console.log(` Leitura salva com ID: ${resultadoB.leitura.id}`);
+        console.log(` Participante na leitura: ${resultadoB.leitura.id_participante}`);
+        console.log(` Participante original: ${resultadoB.participante_original.nome} (ID: ${resultadoB.participante_original.id})`);
 
         // 5. Verificar resultados
         console.log('\n5. Verificando resultados...');
@@ -188,15 +188,15 @@ async function testeLeituraCrossUser() {
 
         // Verificar se o participante foi criado/encontrado corretamente
         if (leitura.user_id === userBId) {
-            console.log('   ✅ SUCESSO: Leitura foi associada ao usuário correto!');
+            console.log('SUCESSO: Leitura foi associada ao usuário correto!');
             
             if (leitura.nome === participanteA.rows[0].nome && leitura.escola === participanteA.rows[0].escola) {
-                console.log('   ✅ SUCESSO: Nome e escola do participante original foram preservados!');
+                console.log('SUCESSO: Nome e escola do participante original foram preservados!');
             } else {
-                console.log('   ❌ ERRO: Nome ou escola não foram preservados corretamente');
+                console.log('ERRO: Nome ou escola não foram preservados corretamente');
             }
         } else {
-            console.log('   ❌ ERRO: Leitura não foi associada ao usuário correto');
+            console.log('ERRO: Leitura não foi associada ao usuário correto');
         }
 
         // 6. Verificar se o usuário B pode ver a leitura em suas leituras
@@ -210,7 +210,7 @@ async function testeLeituraCrossUser() {
 
         console.log(`   Usuário B tem ${leiturasUserB.rows.length} leitura(s):`);
         leiturasUserB.rows.forEach(l => {
-            console.log(`   → ID: ${l.id}, Participante: ${l.nome} (${l.escola}), Nota: ${l.nota}`);
+            console.log(`ID: ${l.id}, Participante: ${l.nome} (${l.escola}), Nota: ${l.nota}`);
         });
 
         // 7. Verificar se o usuário A ainda pode ver suas próprias leituras

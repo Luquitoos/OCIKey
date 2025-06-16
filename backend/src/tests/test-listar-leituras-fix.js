@@ -14,12 +14,12 @@ async function testeListarLeituras() {
         const { rows: usuarios } = await pool.query('SELECT id, username, role FROM users WHERE role = \'user\' LIMIT 1');
         
         if (usuarios.length === 0) {
-            console.log('   ❌ Nenhum usuário encontrado');
+            console.log('Nenhum usuário encontrado');
             return;
         }
 
         const usuario = usuarios[0];
-        console.log(`   Usuário: ${usuario.username} (ID: ${usuario.id}, Role: ${usuario.role})`);
+        console.log(`Usuário: ${usuario.username} (ID: ${usuario.id}, Role: ${usuario.role})`);
 
         // 2. Simular a query de listagem para usuário comum
         console.log('\n2. Testando query de listagem...');
@@ -75,7 +75,7 @@ async function testeListarLeituras() {
         console.log('\n3. Executando query...');
         
         const { rows } = await pool.query(finalQuery, params);
-        console.log(`   ✅ Query executada com sucesso! Encontradas ${rows.length} leituras.`);
+        console.log(`Query executada com sucesso! Encontradas ${rows.length} leituras.`);
 
         // 4. Mostrar algumas leituras
         if (rows.length > 0) {
@@ -105,7 +105,7 @@ async function testeListarLeituras() {
         
         const { rows: countRows } = await pool.query(countQuery, countParams);
         const total = parseInt(countRows[0].count);
-        console.log(`   ✅ Total de leituras: ${total}`);
+        console.log(`Total de leituras: ${total}`);
 
         // 6. Verificar leituras sem participante
         console.log('\n6. Verificando leituras sem participante...');
@@ -121,18 +121,18 @@ async function testeListarLeituras() {
 
         console.log(`   Encontradas ${leiturasSemParticipante.length} leituras sem participante:`);
         leiturasSemParticipante.forEach(l => {
-            console.log(`   → ID: ${l.id}, Arquivo: ${l.arquivo}, User: ${l.username || 'NULL'}`);
+            console.log(`ID: ${l.id}, Arquivo: ${l.arquivo}, User: ${l.username || 'NULL'}`);
         });
 
         console.log('\n=== TESTE CONCLUÍDO ===');
-        console.log('\n✅ Correções implementadas:');
-        console.log('   → Placeholders SQL corrigidos ($1, $2, etc.)');
-        console.log('   → Query de listagem funciona para usuários comuns');
-        console.log('   → Leituras sem participante são incluídas');
-        console.log('   → Query de contagem funciona corretamente');
+        console.log('\nCorreções implementadas:');
+        console.log('Placeholders SQL corrigidos ($1, $2, etc.)');
+        console.log('Query de listagem funciona para usuários comuns');
+        console.log('Leituras sem participante são incluídas');
+        console.log('Query de contagem funciona corretamente');
 
     } catch (error) {
-        console.error('❌ Erro durante o teste:', error);
+        console.error('Erro durante o teste:', error);
         console.error('Stack trace:', error.stack);
     } finally {
         await pool.end();

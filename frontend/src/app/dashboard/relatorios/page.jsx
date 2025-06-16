@@ -19,7 +19,6 @@ import {
   LineElement,
   RadialLinearScale
 } from 'chart.js';
-// import 'chartjs-chart-box-and-violin-plot';
 
 ChartJS.register(
   CategoryScale, 

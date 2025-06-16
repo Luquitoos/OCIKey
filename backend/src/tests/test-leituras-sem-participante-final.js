@@ -14,12 +14,12 @@ async function testeLeiturasSemParticipanteFinal() {
         const { rows: usuarios } = await pool.query('SELECT id, username FROM users WHERE role = \'user\' LIMIT 1');
         
         if (usuarios.length === 0) {
-            console.log('   ❌ Nenhum usuário encontrado');
+            console.log('Nenhum usuário encontrado');
             return;
         }
 
         const usuario = usuarios[0];
-        console.log(`   Usuário: ${usuario.username} (ID: ${usuario.id})`);
+        console.log(`Usuário: ${usuario.username} (ID: ${usuario.id})`);
 
         // 2. Criar leituras de teste sem participante
         console.log('\n2. Criando leituras de teste sem participante...');
@@ -40,7 +40,7 @@ async function testeLeiturasSemParticipanteFinal() {
             usuario.id
         ]);
 
-        console.log(`   ✅ Leitura base.png criada: ID ${leituraBase[0].id}`);
+        console.log(`Leitura base.png criada: ID ${leituraBase[0].id}`);
 
         // Leitura tipo erro Aztec (id_prova = null, id_participante = null)
         const { rows: leituraErro } = await pool.query(`
@@ -58,7 +58,7 @@ async function testeLeiturasSemParticipanteFinal() {
             usuario.id
         ]);
 
-        console.log(`   ✅ Leitura erro Aztec criada: ID ${leituraErro[0].id}`);
+        console.log(`Leitura erro Aztec criada: ID ${leituraErro[0].id}`);
 
         // 3. Testar query de listagem
         console.log('\n3. Testando query de listagem...');
@@ -92,7 +92,7 @@ async function testeLeiturasSemParticipanteFinal() {
 
         const { rows: leituras } = await pool.query(finalQuery, params);
         
-        console.log(`   ✅ Encontradas ${leituras.length} leituras para o usuário:`);
+        console.log(`Encontradas ${leituras.length} leituras para o usuário:`);
 
         // 4. Verificar se as leituras de teste aparecem
         console.log('\n4. Verificando leituras encontradas...');
@@ -118,15 +118,15 @@ async function testeLeiturasSemParticipanteFinal() {
         console.log('\n5. Verificando resultados...');
         
         if (baseEncontrada) {
-            console.log('   ✅ Leitura base.png encontrada na listagem!');
+            console.log('Leitura base.png encontrada na listagem!');
         } else {
-            console.log('   ❌ Leitura base.png NÃO encontrada na listagem!');
+            console.log('Leitura base.png NÃO encontrada na listagem!');
         }
 
         if (erroEncontrado) {
-            console.log('   ✅ Leitura com erro Aztec encontrada na listagem!');
+            console.log('Leitura com erro Aztec encontrada na listagem!');
         } else {
-            console.log('   ❌ Leitura com erro Aztec NÃO encontrada na listagem!');
+            console.log('Leitura com erro Aztec NÃO encontrada na listagem!');
         }
 
         // 6. Testar formatação na resposta da API
@@ -136,7 +136,7 @@ async function testeLeiturasSemParticipanteFinal() {
         
         console.log(`   Leituras sem participante: ${leiturasSemParticipante.length}`);
         leiturasSemParticipante.forEach(l => {
-            console.log(`   → ${l.arquivo}: Participante = "NÃO ENCONTRADO", Prova = ${l.id_prova || 'NÃO ENCONTRADA'}`);
+            console.log(`${l.arquivo}: Participante = "NÃO ENCONTRADO", Prova = ${l.id_prova || 'NÃO ENCONTRADA'}`);
         });
 
         // 7. Testar query de contagem
@@ -151,26 +151,26 @@ async function testeLeiturasSemParticipanteFinal() {
         
         const { rows: countRows } = await pool.query(countQuery, countParams);
         const total = parseInt(countRows[0].count);
-        console.log(`   ✅ Total de leituras: ${total}`);
+        console.log(`Total de leituras: ${total}`);
 
         // 8. Limpar dados de teste
         console.log('\n8. Limpando dados de teste...');
         await pool.query('DELETE FROM leituras WHERE arquivo IN ($1, $2)', ['test_base.png', 'test_erro_aztec.png']);
-        console.log('   ✅ Dados de teste removidos.');
+        console.log('Dados de teste removidos.');
 
         console.log('\n=== TESTE CONCLUÍDO ===');
         
         if (baseEncontrada && erroEncontrado) {
-            console.log('\n🎉 SUCESSO! Todas as leituras sem participante aparecem na listagem!');
-            console.log('\n📋 Comportamento esperado:');
-            console.log('   → base.png: Participante = "NÃO ENCONTRADO", Prova = 0');
-            console.log('   → erro_aztec.png: Participante = "NÃO ENCONTRADO", Prova = "NÃO ENCONTRADA"');
+            console.log('\nSUCESSO! Todas as leituras sem participante aparecem na listagem!');
+            console.log('\nComportamento esperado:');
+            console.log('base.png: Participante = "NÃO ENCONTRADO", Prova = 0');
+            console.log('erro_aztec.png: Participante = "NÃO ENCONTRADO", Prova = "NÃO ENCONTRADA"');
         } else {
-            console.log('\n❌ FALHA! Algumas leituras sem participante não aparecem na listagem.');
+            console.log('\nFALHA! Algumas leituras sem participante não aparecem na listagem.');
         }
 
     } catch (error) {
-        console.error('❌ Erro durante o teste:', error);
+        console.error('Erro durante o teste:', error);
         console.error('Stack trace:', error.stack);
     } finally {
         // Garantir limpeza mesmo em caso de erro
