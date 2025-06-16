@@ -349,6 +349,83 @@ Authorization: Bearer <token>
 }
 ```
 
+### GET /api/participantes/escolas
+
+Lista todas as escolas únicas dos participantes.
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "escolas": [
+      "Escola Nova",
+      "Colégio Central",
+      "Instituto Técnico"
+    ]
+  }
+}
+```
+
+### GET /api/participantes/meu-perfil
+
+Obtém o perfil do participante logado (para usuários com role 'user').
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "participante": {
+      "id": 1,
+      "nome": "Ana Clara Silva",
+      "escola": "Escola Nova",
+      "created_at": "2024-01-15T10:30:00.000Z"
+    }
+  }
+}
+```
+
+### GET /api/participantes/minhas-estatisticas
+
+Obtém estatísticas do participante logado.
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Query Parameters:**
+- `id_prova` (opcional): Filtrar por ID da prova específica
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "estatisticas": {
+      "total_leituras": 15,
+      "media_nota": 7.5,
+      "melhor_nota": 9.5,
+      "pior_nota": 4.0,
+      "total_acertos": 142,
+      "media_acertos": 9.47,
+      "provas_realizadas": 3
+    }
+  }
+}
+```
+
 ### POST /api/participantes
 
 Cria um novo participante.
@@ -616,6 +693,54 @@ Authorization: Bearer <token>
       "limit": 50,
       "total": 200,
       "pages": 4
+    }
+  }
+}
+```
+
+### GET /api/leituras/estatisticas
+
+Obtém estatísticas gerais das leituras.
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "estatisticas": {
+      "total_leituras": 1250,
+      "leituras_sem_erro": 1100,
+      "leituras_com_erro": 150,
+      "taxa_sucesso": 88.0,
+      "media_nota_geral": 7.2,
+      "media_acertos_geral": 14.4,
+      "distribuicao_erros": {
+        "0": 1100,
+        "1": 75,
+        "2": 50,
+        "3": 25
+      },
+      "por_prova": [
+        {
+          "id_prova": 1,
+          "total_leituras": 400,
+          "media_nota": 7.5,
+          "media_acertos": 15.0
+        }
+      ],
+      "por_escola": [
+        {
+          "escola": "Escola Nova",
+          "total_leituras": 300,
+          "media_nota": 8.1,
+          "media_acertos": 16.2
+        }
+      ]
     }
   }
 }

@@ -1,21 +1,6 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:17
-    container_name: ocikey_postgres
-    environment:
-      POSTGRES_DB: ocikey_db
-      POSTGRES_USER: OCI_user
-      POSTGRES_PASSWORD: petoci
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - ocikey_network
-    restart: unless-stopped
-
   backend:
     build: ./backend
     container_name: ocikey_backend
@@ -24,21 +9,15 @@ services:
     environment:
       NODE_ENV: production
       PORT: 5000
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: ocikey_db
-      DB_USER: OCI_user
-      DB_PASSWORD: petoci
-      JWT_SECRET: sua_jwt_secret
+      DB_HOST: turntable.proxy.rlwy.net
+      DB_PORT: 24899
+      DB_NAME: railway
+      DB_USER: postgres
+      DB_PASSWORD: CXfxBDYwgCblBScYNBRUcaZzUIhYughi
+      JWT_SECRET: f054e756-2fe3-4b44-bf90-bcbd41771778
       JWT_EXPIRES_IN: 7d
-      LD_LIBRARY_PATH: /app/biblioteca
-    depends_on:
-      - postgres
-    networks:
-      - ocikey_network
     volumes:
-      - backend_uploads:/app/uploads
-    restart: unless-stopped
+      - ./backend/uploads:/app/uploads
 
   frontend:
     build: ./frontend
@@ -46,19 +25,6 @@ services:
     ports:
       - "3000:3000"
     environment:
-      NODE_ENV: production
       NEXT_PUBLIC_API_URL: http://localhost:5000/api
-      NEXT_TELEMETRY_DISABLED: 1
     depends_on:
       - backend
-    networks:
-      - ocikey_network
-    restart: unless-stopped
-
-volumes:
-  postgres_data:
-  backend_uploads:
-
-networks:
-  ocikey_network:
-    driver: bridge

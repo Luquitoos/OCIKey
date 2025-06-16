@@ -11,7 +11,7 @@
 
 ## Deployment em Produção
 
-Este guia fornece instruções completas para deployment do OCIKey Backend em ambiente de produção. Para informações sobre o projeto, consulte [README.md](README.md). Para detalhes da API, consulte [API_DOCUMENTATION.md](API_DOCUMENTATION.md). Para implementação técnica, consulte [TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md).
+Este guia fornece instruções completas para deployment do sistema completo OCIKey (Frontend + Backend) em ambiente de produção. Para informações sobre o projeto, consulte [README.md](README.md). Para detalhes da API, consulte [API_DOCUMENTATION.md](API_DOCUMENTATION.md). Para implementação técnica, consulte [TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md).
 
 ### 1. Preparação do Ambiente
 
@@ -150,6 +150,25 @@ sudo systemctl status ocikey-backend
 
 ### 3. Deployment com Docker
 
+#### ⚠️ IMPORTANTE - Configuração do Banco de Dados
+
+**O `docker-compose.yml` está configurado para usar banco online no Railway:**
+- **Vantagem**: Funciona imediatamente sem configuração
+- **Banco**: PostgreSQL hospedado no Railway (produção)
+- **Dados**: Já contém participantes, provas e leituras de exemplo
+
+**Para usar banco local PostgreSQL:**
+1. Edite o `docker-compose.yml`
+2. Substitua as variáveis de ambiente:
+```yaml
+environment:
+  DB_HOST: host.docker.internal
+  DB_PORT: 5432
+  DB_NAME: ocikey_db
+  DB_USER: seu_usuario
+  DB_PASSWORD: sua_senha
+```
+
 #### 3.1 Deployment Simples
 
 ```bash
@@ -158,12 +177,15 @@ docker-compose up -d
 
 # Verificar logs
 docker-compose logs -f backend
+docker-compose logs -f frontend
 
 # Parar serviços
 docker-compose down
 ```
 
 #### 3.2 Deployment em Produção com Docker
+
+**⚠️ Nota**: O exemplo abaixo usa PostgreSQL local. O `docker-compose.yml` padrão usa Railway (online).
 
 Criar `docker-compose.prod.yml`:
 
@@ -201,7 +223,7 @@ services:
       - "5000:5000"
     environment:
       - NODE_ENV=production
-      - DB_HOST=postgres
+      - DB_HOST=postgres  # Para banco local
       - DB_PORT=5432
       - DB_NAME=ocikey_db
       - DB_USER=OCI_user
@@ -226,6 +248,21 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  frontend:
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ocikey_frontend_prod
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:5000/api
+    depends_on:
+      - backend
+    networks:
+      - ocikey_network_prod
+    restart: unless-stopped
+
 volumes:
   postgres_data_prod:
 
@@ -235,8 +272,11 @@ networks:
 ```
 
 ```bash
-# Executar em produção
+# Executar em produção com banco local
 docker-compose -f docker-compose.prod.yml up -d
+
+# OU usar o padrão com Railway (banco online)
+docker-compose up -d
 ```
 
 ### 4. Configuração de Proxy Reverso (Nginx)

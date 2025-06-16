@@ -63,16 +63,16 @@ const importarParticipantes = async (caminhoArquivo) => {
         if (existingParticipante.length > 0) {
           // Atualiza participante existente
           await pool.query(
-            'UPDATE participantes SET nome = $1, escola = $2 WHERE id = $3',
-            [nome, escola, idParticipante]
+            'UPDATE participantes SET nome = $1, escola = $2, user_id = $3 WHERE id = $4',
+            [nome, escola, idParticipante, idParticipante]
           );
           atualizados++;
           console.log(`Participante ${idParticipante} atualizado`);
         } else {
           // Insere novo participante
           await pool.query(
-            'INSERT INTO participantes (id, nome, escola) VALUES ($1, $2, $3)',
-            [idParticipante, nome, escola]
+            'INSERT INTO participantes (id, nome, escola, user_id) VALUES ($1, $2, $3, $4)',
+            [idParticipante, nome, escola, idParticipante]
           );
           importados++;
           console.log(`Participante ${idParticipante} importado`);

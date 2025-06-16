@@ -1,4 +1,4 @@
-# OCIKey Backend - Sistema de Controle de Gabaritos
+# OCIKey - Sistema Completo de Leitura de Gabaritos
 
 ## 📚 Documentação
 
@@ -11,7 +11,14 @@
 
 ## Visão Geral
 
-O OCIKey Backend é uma aplicação Node.js desenvolvida para servir como interface de controle de gabaritos, permitindo a leitura automatizada de gabaritos de provas através de processamento de imagens e integração com banco de dados PostgreSQL.
+O OCIKey é uma aplicação completa para leitura automatizada de gabaritos de provas, composta por:
+
+- **Backend (Node.js)**: API REST para processamento de imagens e gerenciamento de dados
+- **Frontend (Next.js)**: Interface web moderna e responsiva para usuários
+- **Biblioteca C++**: Processamento avançado de imagens para leitura de gabaritos
+- **Banco PostgreSQL**: Armazenamento de participantes, provas e leituras
+
+O sistema permite a leitura automatizada de gabaritos através de processamento de imagens, com interface web intuitiva para gerenciamento completo do processo.
 
 ## Índice
 
@@ -21,11 +28,14 @@ O OCIKey Backend é uma aplicação Node.js desenvolvida para servir como interf
 - [Estrutura do Projeto](#estrutura-do-projeto)
 - [Instalação e Configuração](#instalação-e-configuração)
 - [Como Executar](#como-executar)
+  - [Sistema Completo com Docker](#-guia-rápido---sistema-completo-com-docker)
+  - [Execução Local (Desenvolvimento)](#-execução-local-desenvolvimento)
 - [API Endpoints](#api-endpoints)
 - [Integração com Biblioteca C++](#integração-com-biblioteca-c)
 - [Banco de Dados](#banco-de-dados)
-- [Docker](#docker)
 - [Funcionalidades Implementadas](#funcionalidades-implementadas)
+  - [Interface Web (Frontend)](#️-interface-web-frontend)
+  - [Backend (API REST)](#-backend-api-rest)
 - [Testes](#testes)
 
 ## Requisitos do Projeto
@@ -67,32 +77,41 @@ O sistema segue uma arquitetura em camadas:
 
 ```
 ┌─────────────────┐
-│   Frontend      │ (Next.js - não incluído neste backend)
-│   (Next.js)     │
-└──────────��──────┘
-         │
+│   Frontend      │ (Next.js 15 + React 19)
+│   (Next.js)     │ - Interface web responsiva
+└─────────────────┘ - Dashboard administrativo
+         │           - Sistema de autenticação
+         │ HTTP/REST
 ┌─────────────────┐
-│   Backend API   │ (Express.js + Node.js)
-│   (Express.js)  │
-└─────────────────┘
-         │
+│   Backend API   │ (Express.js + Node.js 18)
+│   (Express.js)  │ - API REST
+└─────────────────┘ - Autenticação JWT
+         │           - Rate limiting
 ┌─────────────────┐
 │  Addon C++      │ (Ponte Node.js ↔ Biblioteca C++)
-│  (Node-API)     │
-└─────────────────┘
+│  (Node-API)     │ - Integração nativa
+└─────────────────┘ - Conversão de tipos
          │
 ┌─────────────────┐
 │ Biblioteca C++  │ (Processamento de imagens)
-│ (leitor.h)      │
-└─────────────────┘
+│ (leitor.h)      │ - Leitura de códigos Aztec
+└─────────────────┘ - Processamento de gabaritos
          │
 ┌─────────────────┐
 │   PostgreSQL    │ (Banco de dados)
-│   Database      │
-└─────────────────┘
+│   Database      │ - Dados persistentes
+└─────────────────┘ - Relacionamentos
 ```
 
 ## Tecnologias Utilizadas
+
+### Frontend
+- **Next.js 15** - Framework React com SSR/SSG
+- **React 19** - Biblioteca de interface de usuário
+- **Tailwind CSS** - Framework CSS utilitário
+- **Chart.js** - Biblioteca de gráficos
+- **Heroicons** - Ícones SVG
+- **Context API** - Gerenciamento de estado
 
 ### Backend
 - **Node.js 18+** - Runtime JavaScript
@@ -115,34 +134,65 @@ O sistema segue uma arquitetura em camadas:
 ## Estrutura do Projeto
 
 ```
-backend/
-├── biblioteca/           # Biblioteca C++ fornecida
-│   └── leitor.h         # Header da biblioteca de leitura
-├── src/
-│   ├── addon/           # Ponte Node.js ↔ C++
-│   │   ├── addon.cpp    # Implementação do addon
-│   │   └── index.js     # Interface JavaScript
-│   ├── config/          # Configurações
-│   │   ├── database-config.js
-│   │   ├── setup-database.js
-│   │   └── seed-database.js
-│   ├── controllers/     # Controladores da API
-│   │   ├── leituraController.js
-│   │   ├── participantesController.js
-│   │   └── provasController.js
-│   ├── middleware/      # Middlewares
-│   │   ├── auth.js
-│   │   ├── upload.js
-│   │   └── validation.js
-│   ├── models/          # Modelos de dados
-│   ├── routes/          # Definição de rotas
-│   ├── services/        # Serviços auxiliares
-│   ├── utils/           # Utilitários
-│   └── index.js         # Ponto de entrada
-├── uploads/             # Diretório para uploads
-├── img/                 # Imagens de teste
-├── Dockerfile           # Configuração Docker
-└── package.json         # Dependências Node.js
+OCIKey/
+├── frontend/                    # Interface web (Next.js)
+│   ├── src/
+│   │   ├── app/                # App Router (Next.js 13+)
+│   │   │   ├── (auth)/         # Rotas de autenticação
+│   │   │   ├── dashboard/      # Dashboard principal
+│   │   │   │   ├── leitura/    # Upload e processamento
+│   │   │   │   ├── leituras/   # Visualizar leituras
+│   │   │   │   ├── participantes/ # Gerenciar participantes
+│   │   │   │   ├── provas/     # Gerenciar provas
+│   │   │   │   └── relatorios/ # Relatórios e estatísticas
+│   │   │   └── layout.js       # Layout principal
+│   │   ├── components/         # Componentes reutilizáveis
+│   │   │   ├── ui/             # Componentes de UI
+│   │   │   ├── AuthLayout.jsx  # Layout de autenticação
+│   │   │   ├── DashboardLayout.jsx # Layout do dashboard
+│   │   │   └── ProtectedRoute.jsx  # Proteção de rotas
+│   │   ├── contexts/           # Context API
+│   │   ├── services/           # Serviços de API
+│   │   │   └── api.js          # Cliente da API
+│   │   └── utils/              # Utilitários
+│   ├── public/                 # Arquivos estáticos
+│   ├── Dockerfile              # Container do frontend
+│   └── package.json            # Dependências Next.js
+│
+├── backend/                     # API REST (Node.js)
+│   ├── biblioteca/             # Biblioteca C++ fornecida
+│   │   └── leitor.h           # Header da biblioteca de leitura
+│   ├── src/
+│   │   ├── addon/             # Ponte Node.js ↔ C++
+│   │   │   ├── addon.cpp      # Implementação do addon
+│   │   │   └── index.js       # Interface JavaScript
+│   │   ├── config/            # Configurações
+│   │   │   ├── database-config.js
+│   │   │   ├── setup-database.js
+│   │   │   └── seed-database.js
+│   │   ├── controllers/       # Controladores da API
+│   │   │   ├── leituraController.js
+│   │   │   ├── participantesController.js
+│   │   │   └── provasController.js
+│   │   ├── middleware/        # Middlewares
+│   │   │   ├── auth.js
+│   │   │   ├── upload.js
+│   │   │   └── validation.js
+│   │   ├── models/            # Modelos de dados
+│   │   ├── routes/            # Definição de rotas
+│   │   ├── services/          # Serviços auxiliares
+│   │   ├── utils/             # Utilitários
+│   │   └── index.js           # Ponto de entrada
+│   ├── uploads/               # Diretório para uploads
+│   ├── img/                   # Imagens de teste
+│   ├── Dockerfile             # Container do backend
+│   └── package.json           # Dependências Node.js
+│
+├── docker-compose.yml          # Orquestração de containers
+├── README.md                   # Documentação principal
+├── API_DOCUMENTATION.md        # Documentação da API
+├── TECHNICAL_DOCUMENTATION.md  # Documentação técnica
+└── DEPLOYMENT_GUIDE.md         # Guia de deployment
 ```
 
 ## Instalação e Configuração
@@ -151,23 +201,13 @@ backend/
 
 - **Node.js 18+**
 - **npm ou yarn**
-- **PostgreSQL 13+**
+- **PostgreSQL 17+** (opcional - sistema já configurado com banco em produção)
 - **Docker e Docker Compose** (opcional)
 - **Compilador C++** (g++, make, python3 para node-gyp)
 
-### Instalação Local
+### Configuração de Variáveis de Ambiente
 
-1. **Clone o repositório e navegue para o backend:**
-```bash
-cd backend
-```
-
-2. **Instale as dependências:**
-```bash
-npm install
-```
-
-3. **Configure as variáveis de ambiente:**
+#### Backend (.env)
 Crie um arquivo `.env` na raiz do backend:
 ```env
 NODE_ENV=development
@@ -181,102 +221,113 @@ JWT_SECRET=seu_jwt_secret_muito_seguro
 JWT_EXPIRES_IN=7d
 ```
 
-4. **Compile o addon C++:**
-```bash
-npm run build
+#### Frontend (.env)
+Crie um arquivo `.env` na raiz do frontend:
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5000/api
 ```
 
-5. **Configure o banco de dados:**
+### Instalação Local
+
+#### Backend
+1. **Navegue para o backend:**
 ```bash
-npm run db:init
+cd backend
 ```
 
-**Nota importante**: O sistema utiliza bibliotecas C++ compartilhadas que são automaticamente configuradas através da variável `LD_LIBRARY_PATH` nos scripts npm. As bibliotecas estão localizadas em `./biblioteca/` e são carregadas automaticamente durante a execução.
-
-## Como Executar
-
-### ⚠️ IMPORTANTE: Configuração Inicial do Banco de Dados (Se estiver rodando a própria)
-
-**ANTES de executar o servidor pela primeira vez**, você DEVE configurar o banco de dados(o seu, o real ja ta configurado):
-
-```bash
-# 1. Configure o banco de dados (OBRIGATÓRIO - execute UMA VEZ)
-npm run db:setup
-
-# 2. (Opcional) Popule com dados iniciais
-npm run db:seed
-
-# 3. OU faça tudo de uma vez
-npm run db:init
-```
-
-**⚠️ Atenção**: 
-- Execute `npm run db:setup` **apenas UMA VEZ** 
-- As tabelas ficam **permanentes** no banco PostgreSQL
-- **NÃO precisa** rodar novamente a cada reinicialização
-
-### 🚀 Guia Rápido - Execução Local (Sem Docker)
-
-#### Para usuários que acabaram de clonar o repositório:
-
-**Pré-requisitos:**
-- Node.js 18+ instalado
-- Compilador C++ (g++, make, python3)
-
-**Passo a passo:**
-
-1. **Clone e navegue:**
-```bash
-git clone <url-do-repositorio>
-cd OCIKey/backend
-```
-
-2. **Instale dependências (compila addon C++ automaticamente):**
+2. **Instale as dependências:**
 ```bash
 npm install
 ```
 
-3. **Configure o banco (primeira vez apenas):**
+3. **Compile o addon C++:**
 ```bash
-npm run db:setup
+npm run build
 ```
 
-4. **Execute o servidor:**
+4. **Configure o banco de dados:**
 ```bash
-# Desenvolvimento (com nodemon)
-npm run dev
-
-# Produção
-npm start
-
-5. **Teste se funcionou:**
-```bash
-curl http://localhost:5000/health
+npm run db:init
 ```
 
-**✅ Pronto! O sistema está rodando em http://localhost:5000**
+#### Frontend
+1. **Navegue para o frontend:**
+```bash
+cd frontend
+```
 
-#### ⚠️ Importante sobre o Banco de Dados
+2. **Instale as dependências:**
+```bash
+npm install
+```
+
+**Nota importante**: O backend utiliza bibliotecas C++ compartilhadas que são automaticamente configuradas através da variável `LD_LIBRARY_PATH` nos scripts npm. As bibliotecas estão localizadas em `./biblioteca/` e são carregadas automaticamente durante a execução.
+
+## Como Executar
+
+### 🚀 Guia Rápido - Sistema Completo com Docker
+
+**A forma mais fácil de executar o sistema completo:**
+
+```bash
+# Na raiz do projeto
+docker-compose up -d
+
+# Verificar se está funcionando
+curl http://localhost:5000/health  # Backend
+curl http://localhost:3000         # Frontend
+```
+
+**✅ Pronto! Sistema completo rodando:**
+- **Frontend**: http://localhost:3000
+- **Backend**: http://localhost:5000
+
+**⚠️ IMPORTANTE - Configuração do Banco de Dados:**
+O `docker-compose.yml` está configurado para usar o **banco de dados online no Railway** (PostgreSQL em produção). Isso significa que:
+- ✅ **Funciona imediatamente** sem configuração adicional
+- ✅ **Dados reais** já disponíveis para teste
+- ⚠️ **Se quiser usar banco local**, edite as variáveis de ambiente no `docker-compose.yml`
+
+### 🔧 Execução Local (Desenvolvimento)
+
+#### Pré-requisitos
+- **Node.js 18+** instalado
+- **Compilador C++** (g++, make, python3)
+
+#### Passo a passo:
+
+1. **Clone o repositório:**
+```bash
+git clone <url-do-repositorio>
+cd OCIKey
+```
+
+2. **Configure e execute o Backend:**
+```bash
+cd backend
+npm install          # Instala dependências e compila addon C++
+npm run db:setup     # Configure banco (primeira vez apenas)
+npm run dev          # Inicia backend em modo desenvolvimento
+```
+
+3. **Configure e execute o Frontend (novo terminal):**
+```bash
+cd frontend
+npm install          # Instala dependências do Next.js
+npm run dev          # Inicia frontend em modo desenvolvimento
+```
+
+**✅ Sistema rodando:**
+- **Frontend**: http://localhost:3000
+- **Backend**: http://localhost:5000
+
+### ⚠️ IMPORTANTE: Configuração do Banco de Dados
 
 **O sistema já está configurado para usar o banco de produção** (Railway PostgreSQL) que contém dados reais e está funcionando. Você **não precisa** configurar nada adicional.
 
-- **Vantagem**: Funciona imediatamente sem configuração
-- **Dados**: Já contém participantes, provas e leituras de exemplo
-- **Credenciais**: Estão no arquivo `.env` (confio na boa fé das pessoas)
+**Se quiser usar seu próprio banco PostgreSQL local:**
 
-#### Se quiser usar seu próprio banco PostgreSQL local:
-
-1. **Edite o arquivo `.env`:**
-```env
-# Substitua pelas suas configurações
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=ocikey_db
-DB_USER=seu_usuario
-DB_PASSWORD=sua_senha
-```
-
-2. **Configure o banco:**
+1. **Configure o banco:**
 ```bash
 # Crie o banco no PostgreSQL
 sudo -u postgres psql
@@ -288,58 +339,97 @@ GRANT ALL PRIVILEGES ON DATABASE ocikey_db TO seu_usuario;
 \q
 ```
 
+2. **Edite o arquivo `backend/.env`:**
+```env
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=ocikey_db
+DB_USER=seu_usuario
+DB_PASSWORD=sua_senha
+```
+
 3. **Configure as tabelas:**
 ```bash
+cd backend
 npm run db:init
 ```
 
 #### Comandos Úteis
 
 ```bash
-# Desenvolvimento com reload automático
-npm run dev
+# Backend
+cd backend
+npm run dev                      # Desenvolvimento com reload automático
+npm start                        # Produção
+npm run build                    # Compilar addon C++
+npm run db:init                  # Configurar banco completo
+node src/tests/test-todas-imagens.js  # Testar processamento
 
-# Produção
-npm start
+# Frontend
+cd frontend
+npm run dev                      # Desenvolvimento com hot-reload
+npm run build                    # Build para produção
+npm start                        # Executar build de produção
 
-# Testar processamento de imagens
-node src/tests/test-todas-imagens.js
-
-# Importar dados CSV (se usando banco local)
-npm run import:participantes src/tests/exemplo-participantes.csv
-npm run import:provas src/tests/exemplo-provas.csv
+# Docker
+docker-compose up -d             # Executar sistema completo
+docker-compose logs -f backend   # Ver logs do backend
+docker-compose logs -f frontend  # Ver logs do frontend
 ```
 
 ### Execução com Docker
 
-#### ⚠️ Nota sobre Variáveis de Ambiente no Docker
+O `docker-compose.yml` configura automaticamente:
+- **Backend** (Node.js + Express) na porta 5000
+- **Frontend** (Next.js) na porta 3000
+- **Banco de dados** Railway PostgreSQL (online)
 
-**O `docker-compose.yml` contém as credenciais do meu banco de produção hardcoded** para facilitar o uso imediato. Se você quiser usar seu próprio banco, edite as variáveis de ambiente no arquivo `docker-compose.yml`.
+#### ⚠️ IMPORTANTE - Banco de Dados Railway
 
-**Configuração atual (funciona imediatamente):**
+**O Docker está configurado para usar banco online no Railway:**
+```yaml
+# Configuração atual no docker-compose.yml
+environment:
+  DB_HOST: turntable.proxy.rlwy.net
+  DB_PORT: 24899
+  DB_NAME: railway
+  DB_USER: postgres
+  DB_PASSWORD: CXfxBDYwgCblBScYNBRUcaZzUIhYughi
+```
+
+**Para usar banco local PostgreSQL:**
+1. Instale PostgreSQL localmente
+2. Edite o `docker-compose.yml`:
 ```yaml
 environment:
-  - DB_HOST=turntable.proxy.rlwy.net
-  - DB_PORT=24899
-  - DB_NAME=railway
-  - DB_USER=postgres
-  - DB_PASSWORD=CXfxBDYwgCblBScYNBRUcaZzUIhYughi
+  DB_HOST: host.docker.internal  # ou IP do seu PostgreSQL
+  DB_PORT: 5432
+  DB_NAME: ocikey_db
+  DB_USER: seu_usuario
+  DB_PASSWORD: sua_senha
 ```
 
-1. **Execute com Docker Compose:**
+#### Comandos Docker:
+
 ```bash
-# Na raiz do projeto (onde está o docker-compose.yml)
+# Executar sistema completo
 docker-compose up -d
-```
 
-2. **Verifique os logs:**
-```bash
-docker-compose logs backend
-```
+# Ver logs em tempo real
+docker-compose logs -f backend   # Logs do backend
+docker-compose logs -f frontend  # Logs do frontend
+docker-compose logs -f           # Logs de ambos
 
-3. **Pare os serviços:**
-```bash
+# Parar serviços
 docker-compose down
+
+# Reconstruir containers
+docker-compose build
+docker-compose up -d --build
+
+# Executar comandos nos containers
+docker-compose exec backend npm run db:init
+docker-compose exec frontend npm run build
 ```
 
 ## API Endpoints
@@ -573,7 +663,55 @@ docker-compose down -v
 
 ## Funcionalidades Implementadas
 
-### ✅ Leitura de Gabaritos
+### 🖥️ Interface Web (Frontend)
+
+**Tecnologia**: Next.js 15 + React 19 + Tailwind CSS
+
+#### ✅ Sistema de Autenticação
+- **Login/Registro**: Interface moderna com validação
+- **Proteção de rotas**: Middleware de autenticação
+- **Gerenciamento de sessão**: Context API + localStorage
+
+#### ✅ Dashboard Administrativo
+- **Visão geral**: Estatísticas e métricas em tempo real
+- **Navegação intuitiva**: Menu lateral responsivo
+- **Gr��ficos interativos**: Chart.js para visualização de dados
+
+#### ✅ Gerenciamento de Participantes
+- **Listagem**: Tabela com paginação e busca
+- **CRUD completo**: Criar, editar e excluir participantes
+- **Importação CSV**: Interface para upload de arquivos
+- **Filtros**: Por escola, nome, etc.
+
+#### ✅ Gerenciamento de Provas
+- **Listagem de gabaritos**: Visualização clara dos gabaritos
+- **CRUD completo**: Criar, editar e excluir provas
+- **Configuração de peso**: Interface para definir peso por questão
+- **Importação CSV**: Upload de gabaritos em lote
+
+#### ✅ Processamento de Gabaritos
+- **Upload de imagens**: Drag & drop ou seleção de arquivos
+- **Upload múltiplo**: Processamento em lote
+- **Visualização em tempo real**: Progresso do processamento
+- **Edição de resultados**: Interface para correção manual
+
+#### ✅ Visualização de Leituras
+- **Listagem completa**: Todas as leituras com filtros
+- **Detalhes da leitura**: Gabarito, acertos, nota
+- **Edição inline**: Correção rápida de leituras
+- **Exportação**: Download de resultados
+
+#### ✅ Relatórios e Estatísticas
+- **Dashboard de métricas**: Visão geral do desempenho
+- **Gráficos de desempenho**: Por prova, participante, escola
+- **Estatísticas detalhadas**: Médias, distribuições, etc.
+- **Filtros avançados**: Por período, prova, escola
+
+### 🔧 Backend (API REST)
+
+**Tecnologia**: Node.js 18 + Express.js + PostgreSQL
+
+#### ✅ Leitura de Gabaritos
 
 **Funcionalidade**: Processamento automatizado de imagens de gabaritos
 **Implementação**: `src/controllers/leituraController.js`

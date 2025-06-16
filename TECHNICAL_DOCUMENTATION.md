@@ -11,7 +11,153 @@
 
 ## Implementação Detalhada
 
-Esta documentação detalha a implementação técnica do OCIKey Backend. Para visão geral do projeto, consulte [README.md](README.md). Para informações sobre a API, consulte [API_DOCUMENTATION.md](API_DOCUMENTATION.md). Para deployment, consulte [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md).
+Esta documentação detalha a implementação técnica do sistema completo OCIKey (Frontend + Backend). Para visão geral do projeto, consulte [README.md](README.md). Para informações sobre a API, consulte [API_DOCUMENTATION.md](API_DOCUMENTATION.md). Para deployment, consulte [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md).
+
+## Arquitetura Frontend (Next.js)
+
+### Estrutura de Rotas (App Router)
+
+O frontend utiliza o App Router do Next.js 13+ com a seguinte estrutura:
+
+```
+src/app/
+├── (auth)/                 # Grupo de rotas de autenticação
+│   ├── login/             # Página de login
+│   └── register/          # Página de registro
+├── dashboard/             # Dashboard principal (protegido)
+│   ├── layout.js          # Layout do dashboard
+│   ├── page.jsx           # Página inicial do dashboard
+│   ├── leitura/           # Upload e processamento
+│   ├── leituras/          # Visualizar leituras
+│   ├── participantes/     # Gerenciar participantes
+│   ├── provas/            # Gerenciar provas
+│   └── relatorios/        # Relatórios e estatísticas
+├── layout.js              # Layout raiz
+└── globals.css            # Estilos globais
+```
+
+### Sistema de Autenticação Frontend
+
+```javascript
+// src/contexts/AuthContext.js
+const AuthContext = createContext();
+
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Verificar token no localStorage
+    const token = localStorage.getItem('token');
+    if (token) {
+      // Validar token com backend
+      validateToken(token);
+    }
+    setLoading(false);
+  }, []);
+
+  const login = async (email, password) => {
+    const response = await apiService.login(email, password);
+    if (response.success) {
+      setUser(response.data.user);
+      return response;
+    }
+    throw new Error(response.error);
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, login, logout, loading }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+```
+
+### Componente de Proteção de Rotas
+
+```javascript
+// src/components/ProtectedRoute.jsx
+export default function ProtectedRoute({ children, requiredRole = null }) {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+    
+    if (user && requiredRole && user.role !== requiredRole) {
+      router.push('/dashboard'); // Redirecionar se não tem permissão
+    }
+  }, [user, loading, requiredRole]);
+
+  if (loading) {
+    return <div>Carregando...</div>;
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  if (requiredRole && user.role !== requiredRole) {
+    return <div>Acesso negado</div>;
+  }
+
+  return children;
+}
+```
+
+### Serviço de API (Frontend)
+
+```javascript
+// src/services/api.js
+class ApiService {
+  constructor() {
+    this.baseURL = process.env.NEXT_PUBLIC_API_URL;
+  }
+
+  async request(endpoint, options = {}) {
+    const url = `${this.baseURL}${endpoint}`;
+    const token = this.getToken();
+
+    const config = {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+      ...options,
+    };
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    const response = await fetch(url, config);
+    const data = await response.json();
+
+    if (!response.ok) {
+      const error = new Error(data.message || data.error);
+      error.response = data;
+      error.status = response.status;
+      throw error;
+    }
+
+    return data;
+  }
+
+  // Métodos específicos para cada recurso
+  async uploadImagem(file) {
+    const formData = new FormData();
+    formData.append('imagem', file);
+
+    return this.request('/leitura/upload', {
+      method: 'POST',
+      headers: {}, // Remove Content-Type para FormData
+      body: formData,
+    });
+  }
+}
+```
 
 ### 1. Integração com Biblioteca C++
 
@@ -406,6 +552,24 @@ CMD ["npm", "start"]
 
 #### 6.2 Docker Compose com Health Checks
 
+**⚠️ IMPORTANTE**: O `docker-compose.yml` atual usa **Railway PostgreSQL (online)**, não PostgreSQL local.
+
+**Configuração atual (Railway - banco online):**
+```yaml
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    environment:
+      - DB_HOST=turntable.proxy.rlwy.net  # Railway online
+      - DB_PORT=24899
+      - DB_NAME=railway
+      - DB_USER=postgres
+      - DB_PASSWORD=CXfxBDYwgCblBScYNBRUcaZzUIhYughi
+```
+
+**Exemplo com PostgreSQL local:**
 ```yaml
 version: '3.8'
 
@@ -431,7 +595,7 @@ services:
       postgres:
         condition: service_healthy  # Aguarda PostgreSQL estar saudável
     environment:
-      - DB_HOST=postgres
+      - DB_HOST=postgres  # PostgreSQL local
       - LD_LIBRARY_PATH=/app/biblioteca
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
