@@ -25,32 +25,105 @@ Para deployment em produção, consulte [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.m
 
 ## Índice
 
+- [Sistema de Roles e Permissões](#sistema-de-roles-e-permissões)
 - [Autenticação](#autenticação)
 - [Leitura de Gabaritos](#leitura-de-gabaritos)
 - [Participantes](#participantes)
 - [Provas](#provas)
 - [Leituras](#leituras)
+- [Dashboard](#dashboard)
 - [Códigos de Erro](#códigos-de-erro)
 - [Exemplos de Uso](#exemplos-de-uso)
+
+## Sistema de Roles e Permissões
+
+O OCIKey implementa um sistema de controle de acesso baseado em roles (RBAC) com três tipos de usuário:
+
+### 🎓 ALUNO (role: "aluno")
+**Permissões**:
+- ✅ Fazer leituras de gabaritos (salvas automaticamente)
+- ✅ Visualizar suas próprias leituras e estatísticas
+- ✅ Editar seu próprio perfil
+- ✅ Fazer leitura de provas de outros participantes (nome do detentor será mostrado)
+- ✅ Ver dashboard personalizado com seu desempenho
+- ❌ Não pode editar/deletar provas
+- �� Não pode gerenciar outros participantes
+
+### 👨‍🏫 PROFESSOR (role: "professor")
+**Permissões**:
+- ✅ Visualizar participantes de sua escola
+- ✅ Fazer leituras temporárias (não são salvas)
+- ✅ Ver relatórios de sua escola
+- ✅ Editar nomes dos participantes de sua escola
+- ✅ Importar participantes via CSV
+- ✅ Visualizar gabaritos das provas
+- ❌ Não pode editar/deletar provas
+- ❌ Não pode acessar dados de outras escolas
+
+### 👑 ADMIN (role: "admin")
+**Permissões**:
+- ✅ Acesso total a todos os recursos
+- ✅ Gerenciar todos os participantes
+- ✅ Criar, editar e deletar provas
+- ✅ Ver todas as leituras do sistema
+- ✅ Fazer leituras que são salvas
+- ✅ Relatórios gerais do sistema
+- ✅ Importar dados de qualquer escola
+
+### Headers de Autenticação
+
+Todos os endpoints (exceto `/auth/login` e `/auth/register`) requerem o header:
+
+```
+Authorization: Bearer <jwt_token>
+```
+
+O token JWT contém informações sobre o role do usuário e é validado em cada requisição.
 
 ## Autenticação
 
 ### POST /api/auth/register
 
-Registra um novo usuário no sistema.
+Registra um novo usuário no sistema com role específico.
 
 **Headers:**
 ```
 Content-Type: application/json
 ```
 
-**Body:**
+**Body para ALUNO:**
 ```json
 {
-  "username": "string (3-50 chars)",
-  "email": "string (valid email)",
-  "password": "string (min 6 chars)",
-  "role": "string (admin|teacher|user)" // opcional, default: user
+  "nome": "João Silva",
+  "email": "joao@email.com",
+  "password": "senha123",
+  "role": "aluno",
+  "escola": "Escola Nova",
+  "turma": "3º Ano A"
+}
+```
+
+**Body para PROFESSOR:**
+```json
+{
+  "nome": "Maria Santos",
+  "email": "maria@email.com",
+  "password": "senha123",
+  "role": "professor",
+  "escola": "Escola Nova",
+  "disciplina": "Matemática"
+}
+```
+
+**Body para ADMIN:**
+```json
+{
+  "nome": "Carlos Admin",
+  "email": "admin@email.com",
+  "password": "senha123",
+  "role": "admin",
+  "organizacao": "Secretaria de Educação",
+  "cargo": "Coordenador"
 }
 ```
 
@@ -62,9 +135,10 @@ Content-Type: application/json
   "data": {
     "user": {
       "id": 1,
-      "username": "joao123",
+      "nome": "João Silva",
       "email": "joao@email.com",
-      "role": "user",
+      "role": "aluno",
+      "escola": "Escola Nova",
       "created_at": "2024-01-15T10:30:00.000Z"
     },
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -197,7 +271,7 @@ Processa múltiplas imagens de gabarito.
 
 ### POST /api/leitura/upload
 
-Faz upload e processa uma única imagem.
+Faz upload e processa uma única imagem. O comportamento varia conforme o role do usuário.
 
 **Headers:**
 ```
@@ -210,11 +284,105 @@ Content-Type: multipart/form-data
 imagem: <file> (PNG, JPG, JPEG - max 10MB)
 ```
 
-**Response 200:**
+**Response 200 para ALUNO/ADMIN (leitura salva - SUCESSO):**
 ```json
 {
-  "leitura": {
+  "success": true,
+  "data": {
     "id": 1,
+    "arquivo": "uploads/1642248600000-123456789.png",
+    "erro": 0,
+    "id_prova": 4,
+    "id_participante": 1,
+    "gabarito": "abcdebabcbb-baca-cbc",
+    "acertos": 15,
+    "nota": 7.50,
+    "created_at": "2024-01-15T10:30:00.000Z"
+  },
+  "message": "Leitura realizada com sucesso",
+  "status": "success",
+  "arquivo_original": "gabarito_aluno1.png",
+  "arquivo_salvo": "1642248600000-123456789.png"
+}
+```
+
+**Response 200 para ALUNO/ADMIN (leitura com ERRO AZTEC):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 2,
+    "arquivo": "uploads/1642248600001-123456790.png",
+    "erro": 1,
+    "id_prova": -1,
+    "id_participante": -1,
+    "gabarito": "X-Xdebabcbb-baca-cbc",
+    "acertos": 0,
+    "nota": 0.00,
+    "created_at": "2024-01-15T10:35:00.000Z"
+  },
+  "message": "Leitura processada com avisos",
+  "warning": "Erro de leitura do código Aztec",
+  "status": "warning",
+  "details": "O código Aztec não pôde ser lido corretamente. Verifique a qualidade da imagem.",
+  "arquivo_original": "gabarito_problema.png",
+  "arquivo_salvo": "1642248600001-123456790.png"
+}
+```
+
+**Response 200 para ALUNO/ADMIN (leitura com ERRO DE ÁREA):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 3,
+    "arquivo": "uploads/1642248600002-123456791.png",
+    "erro": 2,
+    "id_prova": 4,
+    "id_participante": 1,
+    "gabarito": "a?cdebab?bb-ba?a-cbc",
+    "acertos": 12,
+    "nota": 6.00,
+    "created_at": "2024-01-15T10:40:00.000Z"
+  },
+  "message": "Leitura processada com avisos",
+  "warning": "Imprecisão na identificação da área de leitura",
+  "status": "warning",
+  "details": "A área de leitura foi identificada com imprecisão. Alguns dados podem estar incorretos.",
+  "arquivo_original": "gabarito_impreciso.png",
+  "arquivo_salvo": "1642248600002-123456791.png"
+}
+```
+
+**Response 200 para ALUNO/ADMIN (leitura com ERRO FATAL):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 4,
+    "arquivo": "uploads/1642248600003-123456792.png",
+    "erro": 3,
+    "id_prova": -1,
+    "id_participante": -1,
+    "gabarito": "",
+    "acertos": 0,
+    "nota": 0.00,
+    "created_at": "2024-01-15T10:45:00.000Z"
+  },
+  "message": "Leitura processada com erros",
+  "error": "Erro fatal durante a leitura",
+  "status": "error",
+  "details": "Falha crítica no processamento. Tente novamente com uma imagem de melhor qualidade.",
+  "arquivo_original": "gabarito_corrompido.png",
+  "arquivo_salvo": "1642248600003-123456792.png"
+}
+```
+
+**Response 200 para PROFESSOR (leitura temporária):**
+```json
+{
+  "success": true,
+  "data": {
     "arquivo": "uploads/1642248600000-123456789.png",
     "erro": 0,
     "id_prova": 4,
@@ -222,10 +390,11 @@ imagem: <file> (PNG, JPG, JPEG - max 10MB)
     "gabarito": "X-Xdebabcbb-baca-cbc",
     "acertos": 1,
     "nota": 0.50,
-    "created_at": "2024-01-15T10:30:00.000Z"
+    "participante_nome": "Ana Silva"
   },
-  "arquivo_original": "gabarito_aluno1.png",
-  "arquivo_salvo": "1642248600000-123456789.png"
+  "message": "Leitura processada (visualização temporária)",
+  "temporary": true,
+  "arquivo_original": "gabarito_aluno1.png"
 }
 ```
 
@@ -798,6 +967,114 @@ Remove uma leitura.
 }
 ```
 
+## Dashboard
+
+### GET /api/dashboard
+
+Obtém dados do dashboard personalizado baseado no role do usuário.
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Response 200 para ALUNO:**
+```json
+{
+  "success": true,
+  "data": {
+    "totalLeituras": 15,
+    "minhaNota": "7.50",
+    "mediaGeral": "6.80",
+    "acimaDaMedia": true,
+    "ultimasLeituras": [
+      {
+        "id": 1,
+        "nota": 8.5,
+        "acertos": 17,
+        "created_at": "2024-01-15T10:30:00.000Z"
+      }
+    ],
+    "graficoDesempenho": [7.5, 8.0, 6.5, 9.0, 8.5]
+  },
+  "role": "aluno"
+}
+```
+
+**Response 200 para PROFESSOR:**
+```json
+{
+  "success": true,
+  "data": {
+    "totalParticipantes": 45,
+    "totalLeituras": 180,
+    "mediaEscola": "7.20",
+    "ultimasLeituras": [
+      {
+        "id": 1,
+        "participante": "Ana Silva",
+        "nota": 8.5,
+        "acertos": 17,
+        "created_at": "2024-01-15T10:30:00.000Z"
+      }
+    ],
+    "participantesAtivos": 42
+  },
+  "role": "professor"
+}
+```
+
+**Response 200 para ADMIN:**
+```json
+{
+  "success": true,
+  "data": {
+    "totalParticipantes": 1250,
+    "totalLeituras": 5600,
+    "totalProvas": 12,
+    "totalEscolas": 25,
+    "mediaGeral": "7.10"
+  },
+  "role": "admin"
+}
+```
+
+### GET /api/dashboard/comparacao
+
+Obtém dados de comparação de desempenho (apenas para ALUNO).
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "data": {
+    "meuDesempenho": {
+      "nota": 7.5,
+      "posicao": 15,
+      "percentil": 85
+    },
+    "estatisticas": {
+      "mediaGeral": 6.8,
+      "mediana": 7.0,
+      "melhorNota": 9.5,
+      "piorNota": 2.0
+    },
+    "distribuicao": {
+      "0-2": 5,
+      "2-4": 12,
+      "4-6": 25,
+      "6-8": 35,
+      "8-10": 23
+    }
+  }
+}
+```
+
 ## Endpoints Auxiliares
 
 ### GET /health
@@ -844,10 +1121,72 @@ Verifica o status do servidor (não requer autenticação).
 
 ### Códigos de Erro da Biblioteca C++
 
-- `0` - Sem erro (leitura bem-sucedida)
-- `1` - Erro de leitura do código Aztec
-- `2` - Imprecisão ou erro na identificação da área de leitura
-- `3` - Erro fatal durante a leitura
+#### Código 0 - Sucesso ✅
+- **Descrição**: Leitura bem-sucedida
+- **Comportamento**: Dados completos disponíveis
+- **Interface**: Alerta verde com mensagem de sucesso
+- **Ação**: Nenhuma ação necessária
+
+#### Código 1 - Erro Aztec ⚠️
+- **Descrição**: Erro de leitura do código Aztec
+- **Comportamento**: ID da prova e participante podem ser -1
+- **Interface**: Alerta amarelo com detalhes do erro
+- **Ação**: Verificar qualidade da imagem, tentar novamente
+
+#### Código 2 - Erro de Área 🔍
+- **Descrição**: Imprecisão na identificação da área de leitura
+- **Comportamento**: Alguns dados podem estar incorretos (marcados com ?)
+- **Interface**: Alerta laranja com aviso de imprecisão
+- **Ação**: Revisar respostas manualmente, corrigir se necessário
+
+#### Código 3 - Erro Fatal ❌
+- **Descrição**: Erro fatal durante a leitura
+- **Comportamento**: Falha completa, dados não confiáveis
+- **Interface**: Alerta vermelho com erro crítico
+- **Ação**: Usar imagem de melhor qualidade, verificar formato
+
+### Sistema de Feedback Visual
+
+O sistema exibe diferentes tipos de feedback baseado no código de erro:
+
+```javascript
+// Exemplo de como o frontend trata os códigos de erro
+const getStatusDisplay = (erro) => {
+  switch(erro) {
+    case 0:
+      return {
+        type: 'success',
+        icon: '✅',
+        message: 'Leitura realizada com sucesso',
+        color: 'green'
+      };
+    case 1:
+      return {
+        type: 'warning',
+        icon: '⚠️',
+        message: 'Erro de leitura do código Aztec',
+        color: 'yellow',
+        action: 'Verificar qualidade da imagem'
+      };
+    case 2:
+      return {
+        type: 'warning',
+        icon: '🔍',
+        message: 'Imprecisão na identificação da área',
+        color: 'orange',
+        action: 'Revisar respostas manualmente'
+      };
+    case 3:
+      return {
+        type: 'error',
+        icon: '❌',
+        message: 'Erro fatal durante a leitura',
+        color: 'red',
+        action: 'Tentar com imagem de melhor qualidade'
+      };
+  }
+};
+```
 
 ### Formato de Resposta de Erro
 
@@ -959,6 +1298,227 @@ console.log({
   mediaNota: stats.nota / stats.total,
   taxaErro: (stats.erros / stats.total) * 100
 });
+```
+
+### Exemplo 4: Fluxo por Role
+
+#### Fluxo do ALUNO:
+```javascript
+// 1. Login como aluno
+const loginResponse = await fetch('/api/auth/login', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    email: 'aluno@escola.com',
+    password: 'senha123'
+  })
+});
+const { data: { token } } = await loginResponse.json();
+
+// 2. Ver dashboard personalizado
+const dashboardResponse = await fetch('/api/dashboard', {
+  headers: { 'Authorization': `Bearer ${token}` }
+});
+const dashboard = await dashboardResponse.json();
+console.log(`Minha nota: ${dashboard.data.minhaNota}, Média geral: ${dashboard.data.mediaGeral}`);
+
+// 3. Fazer leitura (será salva automaticamente)
+const formData = new FormData();
+formData.append('imagem', imageFile);
+const leituraResponse = await fetch('/api/leitura/upload', {
+  method: 'POST',
+  headers: { 'Authorization': `Bearer ${token}` },
+  body: formData
+});
+const resultado = await leituraResponse.json();
+console.log(`Leitura salva com ID: ${resultado.data.id}`);
+```
+
+#### Fluxo do PROFESSOR:
+```javascript
+// 1. Login como professor
+const loginResponse = await fetch('/api/auth/login', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    email: 'professor@escola.com',
+    password: 'senha123'
+  })
+});
+const { data: { token } } = await loginResponse.json();
+
+// 2. Ver participantes da escola
+const participantesResponse = await fetch('/api/participantes', {
+  headers: { 'Authorization': `Bearer ${token}` }
+});
+const participantes = await participantesResponse.json();
+console.log(`Participantes da minha escola: ${participantes.data.participantes.length}`);
+
+// 3. Fazer leitura temporária (não será salva)
+const formData = new FormData();
+formData.append('imagem', imageFile);
+const leituraResponse = await fetch('/api/leitura/upload', {
+  method: 'POST',
+  headers: { 'Authorization': `Bearer ${token}` },
+  body: formData
+});
+const resultado = await leituraResponse.json();
+console.log(`Leitura temporária - Participante: ${resultado.data.participante_nome}`);
+```
+
+#### Fluxo do ADMIN:
+```javascript
+// 1. Login como admin
+const loginResponse = await fetch('/api/auth/login', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    email: 'admin@sistema.com',
+    password: 'senha123'
+  })
+});
+const { data: { token } } = await loginResponse.json();
+
+// 2. Criar nova prova
+const novaProva = await fetch('/api/provas', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    gabarito: 'abcdeabcdeabcdeabcde',
+    peso_questao: 0.5
+  })
+});
+
+// 3. Ver estatísticas gerais
+const dashboardResponse = await fetch('/api/dashboard', {
+  headers: { 'Authorization': `Bearer ${token}` }
+});
+const stats = await dashboardResponse.json();
+console.log(`Total de participantes: ${stats.data.totalParticipantes}`);
+console.log(`Total de escolas: ${stats.data.totalEscolas}`);
+```
+
+### Exemplo 5: Tratamento de Erros de Leitura
+
+```javascript
+// Função para processar imagem e tratar diferentes tipos de erro
+async function processarImagemComTratamento(imageFile, token) {
+  try {
+    const formData = new FormData();
+    formData.append('imagem', imageFile);
+    
+    const response = await fetch('/api/leitura/upload', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData
+    });
+    
+    const resultado = await response.json();
+    
+    // Tratar diferentes códigos de erro
+    switch(resultado.data.erro) {
+      case 0:
+        console.log('✅ Sucesso:', resultado.message);
+        console.log(`Nota: ${resultado.data.nota}, Acertos: ${resultado.data.acertos}`);
+        return { success: true, data: resultado.data };
+        
+      case 1:
+        console.warn('⚠️ Erro Aztec:', resultado.warning);
+        console.log('Sugestão:', resultado.details);
+        // Pode tentar reprocessar ou solicitar nova imagem
+        return { 
+          success: false, 
+          error: 'aztec', 
+          message: resultado.warning,
+          suggestion: 'Verificar qualidade da imagem'
+        };
+        
+      case 2:
+        console.warn('🔍 Erro de Área:', resultado.warning);
+        console.log('Dados parciais disponíveis, revisar manualmente');
+        // Dados parciais podem ser úteis, mas precisam revisão
+        return { 
+          success: 'partial', 
+          data: resultado.data,
+          warning: resultado.warning,
+          suggestion: 'Revisar respostas manualmente'
+        };
+        
+      case 3:
+        console.error('❌ Erro Fatal:', resultado.error);
+        console.log('Falha crítica, tentar nova imagem');
+        return { 
+          success: false, 
+          error: 'fatal', 
+          message: resultado.error,
+          suggestion: 'Usar imagem de melhor qualidade'
+        };
+        
+      default:
+        console.error('Código de erro desconhecido:', resultado.data.erro);
+        return { success: false, error: 'unknown' };
+    }
+    
+  } catch (error) {
+    console.error('Erro na requisição:', error);
+    return { success: false, error: 'network', message: error.message };
+  }
+}
+
+// Exemplo de uso com tratamento
+async function exemploComTratamento() {
+  const token = 'seu_jwt_token';
+  const imageFile = document.getElementById('fileInput').files[0];
+  
+  const resultado = await processarImagemComTratamento(imageFile, token);
+  
+  if (resultado.success === true) {
+    // Leitura bem-sucedida
+    exibirResultadoSucesso(resultado.data);
+  } else if (resultado.success === 'partial') {
+    // Dados parciais, permitir edição manual
+    exibirResultadoParcial(resultado.data, resultado.warning);
+  } else {
+    // Erro, mostrar mensagem e sugestão
+    exibirErro(resultado.message, resultado.suggestion);
+  }
+}
+
+// Funções auxiliares para exibir resultados
+function exibirResultadoSucesso(data) {
+  const statusDiv = document.getElementById('status');
+  statusDiv.innerHTML = `
+    <div class="alert alert-success">
+      <h4>✅ Leitura realizada com sucesso!</h4>
+      <p>Nota: ${data.nota} | Acertos: ${data.acertos}</p>
+    </div>
+  `;
+}
+
+function exibirResultadoParcial(data, warning) {
+  const statusDiv = document.getElementById('status');
+  statusDiv.innerHTML = `
+    <div class="alert alert-warning">
+      <h4>🔍 ${warning}</h4>
+      <p>Dados parciais disponíveis. Revisar respostas manualmente.</p>
+      <button onclick="abrirEdicaoManual('${data.id}')">Editar Leitura</button>
+    </div>
+  `;
+}
+
+function exibirErro(message, suggestion) {
+  const statusDiv = document.getElementById('status');
+  statusDiv.innerHTML = `
+    <div class="alert alert-error">
+      <h4>❌ ${message}</h4>
+      <p>Sugestão: ${suggestion}</p>
+      <button onclick="tentarNovamente()">Tentar Novamente</button>
+    </div>
+  `;
+}
 ```
 
 ## Postman Collection

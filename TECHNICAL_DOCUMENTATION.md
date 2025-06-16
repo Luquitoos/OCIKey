@@ -36,7 +36,7 @@ src/app/
 └── globals.css            # Estilos globais
 ```
 
-### Sistema de Autenticação Frontend
+### Sistema de Autenticação e Roles Frontend
 
 ```javascript
 // src/contexts/AuthContext.js
@@ -65,12 +65,136 @@ export const AuthProvider = ({ children }) => {
     throw new Error(response.error);
   };
 
+  // Verificar permissões baseadas no role
+  const hasPermission = (action, resource) => {
+    if (!user) return false;
+    
+    const permissions = {
+      'aluno': {
+        'leituras': ['read', 'create'],
+        'participantes': ['read_own'],
+        'provas': ['read'],
+        'relatorios': ['read_own']
+      },
+      'professor': {
+        'leituras': ['read_school', 'create_temp'],
+        'participantes': ['read_school', 'update_school', 'import_school'],
+        'provas': ['read'],
+        'relatorios': ['read_school']
+      },
+      'admin': {
+        'leituras': ['read', 'create', 'update', 'delete'],
+        'participantes': ['read', 'create', 'update', 'delete', 'import'],
+        'provas': ['read', 'create', 'update', 'delete'],
+        'relatorios': ['read']
+      }
+    };
+    
+    const userPermissions = permissions[user.role] || {};
+    const resourcePermissions = userPermissions[resource] || [];
+    return resourcePermissions.includes(action);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, hasPermission }}>
       {children}
     </AuthContext.Provider>
   );
 };
+```
+
+### Sistema de Registro com Roles Diferenciadas
+
+```javascript
+// src/components/RegisterForm.jsx
+export default function RegisterForm() {
+  const [selectedRole, setSelectedRole] = useState('aluno');
+  const [formData, setFormData] = useState({});
+
+  // Configuração de cores por role
+  const roleColors = {
+    'aluno': 'bg-blue-500',
+    'professor': 'bg-green-500', 
+    'admin': 'bg-red-500'
+  };
+
+  // Campos específicos por role
+  const roleFields = {
+    'aluno': ['nome', 'email', 'password', 'escola', 'turma'],
+    'professor': ['nome', 'email', 'password', 'escola', 'disciplina'],
+    'admin': ['nome', 'email', 'password', 'organizacao', 'cargo']
+  };
+
+  const handleRoleChange = (role) => {
+    setSelectedRole(role);
+    // Limpa campos não aplicáveis ao novo role
+    const newFormData = {};
+    roleFields[role].forEach(field => {
+      if (formData[field]) {
+        newFormData[field] = formData[field];
+      }
+    });
+    setFormData(newFormData);
+  };
+
+  return (
+    <div className={`min-h-screen ${roleColors[selectedRole]} transition-colors duration-300`}>
+      <div className="bg-white rounded-lg shadow-lg p-8">
+        {/* Seletor de Role */}
+        <div className="mb-6">
+          <h3 className="text-lg font-medium mb-4">Tipo de Conta</h3>
+          <div className="grid grid-cols-3 gap-4">
+            {['aluno', 'professor', 'admin'].map(role => (
+              <button
+                key={role}
+                onClick={() => handleRoleChange(role)}
+                className={`p-4 rounded-lg border-2 transition-all ${
+                  selectedRole === role 
+                    ? `border-${roleColors[role].split('-')[1]}-500 bg-${roleColors[role].split('-')[1]}-50` 
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="text-center">
+                  <div className="text-2xl mb-2">
+                    {role === 'aluno' && '🎓'}
+                    {role === 'professor' && '👨‍🏫'}
+                    {role === 'admin' && '👑'}
+                  </div>
+                  <div className="font-medium capitalize">{role}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Campos dinâmicos baseados no role */}
+        <form onSubmit={handleSubmit}>
+          {roleFields[selectedRole].map(field => (
+            <div key={field} className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {getFieldLabel(field)}
+              </label>
+              <input
+                type={getFieldType(field)}
+                value={formData[field] || ''}
+                onChange={(e) => setFormData({...formData, [field]: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+          ))}
+          
+          <button
+            type="submit"
+            className={`w-full py-2 px-4 ${roleColors[selectedRole]} text-white rounded-md hover:opacity-90 transition-opacity`}
+          >
+            Registrar como {selectedRole.charAt(0).toUpperCase() + selectedRole.slice(1)}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
 ```
 
 ### Componente de Proteção de Rotas
@@ -254,7 +378,7 @@ O arquivo `binding.gyp` (gerado automaticamente) configura a compilação:
 #### 2.1 Fluxo de Processamento
 
 ```
-[Imagem] → [Upload/Path] → [Addon C++] → [Biblioteca] → [Resultado] → [Cálculo Nota] → [Banco]
+[Imagem] → [Upload/Path] → [Addon C++] → [Biblioteca] → [Resultado] → [Cálculo Nota] → [Visualização] → [Banco]
 ```
 
 1. **Recepção**: API recebe imagem (upload ou caminho)
@@ -262,7 +386,266 @@ O arquivo `binding.gyp` (gerado automaticamente) configura a compilação:
 3. **Processamento**: Addon chama biblioteca C++
 4. **Interpretação**: Sistema interpreta resultado da leitura
 5. **Cálculo**: Calcula acertos e nota baseado no gabarito
-6. **Persistência**: Salva resultado no banco de dados
+6. **Visualização**: Renderiza gabarito com código de cores
+7. **Persistência**: Salva resultado no banco de dados (conforme role)
+
+#### 2.2 Sistema de Visualização com Código de Cores
+
+```javascript
+// src/components/GabaritoVisual.jsx
+export default function GabaritoVisual({ leitura, gabarito, respostas }) {
+  const getCircleStyle = (questao, resposta, gabaritoCorreto) => {
+    // Resposta correta
+    if (resposta === gabaritoCorreto && resposta !== '0' && resposta !== 'X' && resposta !== '?') {
+      return {
+        borderColor: '#10B981', // Verde
+        backgroundColor: '#D1FAE5',
+        borderWidth: '3px'
+      };
+    }
+    
+    // Resposta incorreta
+    if (resposta !== gabaritoCorreto && resposta !== '0' && resposta !== 'X' && resposta !== '?') {
+      return {
+        borderColor: '#EF4444', // Vermelho
+        backgroundColor: '#FEE2E2',
+        borderWidth: '3px'
+      };
+    }
+    
+    // Erro de leitura, vazio ou múltipla marcação
+    return {
+      borderColor: '#9CA3AF', // Cinza
+      backgroundColor: '#F3F4F6',
+      borderWidth: '2px',
+      opacity: '0.6'
+    };
+  };
+
+  const getStatusIcon = (resposta) => {
+    if (resposta === '0') return '⚪'; // Vazio
+    if (resposta === 'X') return '❌'; // Múltipla marcação
+    if (resposta === '?') return '❓'; // Erro de leitura
+    return resposta; // a, b, c, d, e
+  };
+
+  // Componente de status da leitura
+  const StatusLeitura = ({ erro }) => {
+    const statusConfig = {
+      0: {
+        icon: '✅',
+        message: 'Leitura realizada com sucesso',
+        color: 'bg-green-100 border-green-500 text-green-800',
+        iconColor: 'text-green-600'
+      },
+      1: {
+        icon: '⚠️',
+        message: 'Erro de leitura do código Aztec',
+        color: 'bg-yellow-100 border-yellow-500 text-yellow-800',
+        iconColor: 'text-yellow-600',
+        details: 'O código Aztec não pôde ser lido corretamente. Verifique a qualidade da imagem.'
+      },
+      2: {
+        icon: '🔍',
+        message: 'Imprecisão na identificação da área de leitura',
+        color: 'bg-orange-100 border-orange-500 text-orange-800',
+        iconColor: 'text-orange-600',
+        details: 'A área de leitura foi identificada com imprecisão. Alguns dados podem estar incorretos.'
+      },
+      3: {
+        icon: '❌',
+        message: 'Erro fatal durante a leitura',
+        color: 'bg-red-100 border-red-500 text-red-800',
+        iconColor: 'text-red-600',
+        details: 'Falha crítica no processamento. Tente novamente com uma imagem de melhor qualidade.'
+      }
+    };
+
+    const status = statusConfig[erro] || statusConfig[3];
+
+    return (
+      <div className={`p-4 rounded-lg border-2 mb-6 ${status.color}`}>
+        <div className="flex items-center gap-3">
+          <span className={`text-2xl ${status.iconColor}`}>{status.icon}</span>
+          <div>
+            <h4 className="font-semibold">{status.message}</h4>
+            {status.details && (
+              <p className="text-sm mt-1 opacity-90">{status.details}</p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="gabarito-visual p-6 bg-white rounded-lg shadow-lg">
+      <h3 className="text-xl font-bold mb-4">Resultado da Leitura</h3>
+      
+      {/* Status da Leitura */}
+      <StatusLeitura erro={leitura.erro} />
+      
+      {/* Legenda */}
+      <div className="mb-6 flex gap-4 text-sm">
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 rounded-full border-2 border-green-500 bg-green-100"></div>
+          <span>Correto</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 rounded-full border-2 border-red-500 bg-red-100"></div>
+          <span>Incorreto</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 rounded-full border-2 border-gray-400 bg-gray-100 opacity-60"></div>
+          <span>Erro/Vazio</span>
+        </div>
+      </div>
+
+      {/* Grid de questões */}
+      <div className="grid grid-cols-10 gap-3">
+        {respostas.split('').map((resposta, index) => {
+          const gabaritoResposta = gabarito[index];
+          const questaoNum = index + 1;
+          
+          return (
+            <div key={index} className="text-center">
+              <div className="text-xs text-gray-500 mb-1">Q{questaoNum}</div>
+              <div
+                className="w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-medium transition-all hover:scale-110"
+                style={getCircleStyle(questaoNum, resposta, gabaritoResposta)}
+                title={`Questão ${questaoNum}: ${resposta === gabaritoResposta ? 'Correto' : 'Incorreto'} (Gabarito: ${gabaritoResposta})`}
+              >
+                {getStatusIcon(resposta)}
+              </div>
+              <div className="text-xs text-gray-400 mt-1">{gabaritoResposta}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Estatísticas */}
+      <div className="mt-6 grid grid-cols-3 gap-4 text-center">
+        <div className="bg-green-50 p-3 rounded-lg">
+          <div className="text-2xl font-bold text-green-600">{leitura.acertos}</div>
+          <div className="text-sm text-green-700">Acertos</div>
+        </div>
+        <div className="bg-blue-50 p-3 rounded-lg">
+          <div className="text-2xl font-bold text-blue-600">{leitura.nota}</div>
+          <div className="text-sm text-blue-700">Nota</div>
+        </div>
+        <div className="bg-gray-50 p-3 rounded-lg">
+          <div className="text-2xl font-bold text-gray-600">{gabarito.length}</div>
+          <div className="text-sm text-gray-700">Total</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+#### 2.3 Sistema de Leitura Múltipla e Isolada
+
+```javascript
+// src/components/UploadLeitura.jsx
+export default function UploadLeitura() {
+  const [mode, setMode] = useState('isolada'); // 'isolada' ou 'multipla'
+  const [files, setFiles] = useState([]);
+  const [processing, setProcessing] = useState(false);
+  const [results, setResults] = useState([]);
+
+  const handleFileUpload = async (uploadedFiles) => {
+    setFiles(uploadedFiles);
+    
+    if (mode === 'isolada') {
+      // Processa uma imagem por vez
+      for (const file of uploadedFiles) {
+        await processarImagemIsolada(file);
+      }
+    } else {
+      // Processa todas as imagens simultaneamente
+      await processarImagensMultiplas(uploadedFiles);
+    }
+  };
+
+  const processarImagemIsolada = async (file) => {
+    setProcessing(true);
+    try {
+      const formData = new FormData();
+      formData.append('imagem', file);
+      
+      const response = await apiService.uploadImagem(formData);
+      setResults(prev => [...prev, response.data]);
+    } catch (error) {
+      console.error('Erro ao processar imagem:', error);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const processarImagensMultiplas = async (files) => {
+    setProcessing(true);
+    try {
+      const formData = new FormData();
+      files.forEach(file => formData.append('imagens', file));
+      
+      const response = await apiService.uploadImagensMultiplas(formData);
+      setResults(response.data.leituras);
+    } catch (error) {
+      console.error('Erro ao processar imagens:', error);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  return (
+    <div className="upload-leitura p-6">
+      {/* Seletor de modo */}
+      <div className="mb-6">
+        <h3 className="text-lg font-medium mb-4">Modo de Processamento</h3>
+        <div className="flex gap-4">
+          <button
+            onClick={() => setMode('isolada')}
+            className={`px-4 py-2 rounded-lg ${mode === 'isolada' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+          >
+            Leitura Isolada
+          </button>
+          <button
+            onClick={() => setMode('multipla')}
+            className={`px-4 py-2 rounded-lg ${mode === 'multipla' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+          >
+            Leitura Múltipla
+          </button>
+        </div>
+      </div>
+
+      {/* Área de upload */}
+      <DropZone
+        onFilesSelected={handleFileUpload}
+        multiple={mode === 'multipla'}
+        accept="image/*"
+        maxFiles={mode === 'multipla' ? 50 : 1}
+      />
+
+      {/* Resultados */}
+      {results.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-lg font-medium mb-4">Resultados</h3>
+          <div className="space-y-4">
+            {results.map((result, index) => (
+              <GabaritoVisual
+                key={index}
+                leitura={result}
+                gabarito={result.gabarito_prova}
+                respostas={result.gabarito}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+```
 
 #### 2.2 Implementação do Controller (leituraController.js)
 
@@ -386,7 +769,7 @@ export const pool = createPool();
 
 ### 4. Sistema de Autenticação
 
-#### 4.1 JWT Implementation
+#### 4.1 JWT Implementation com Role-Based Access Control
 
 ```javascript
 // src/middleware/auth.js
@@ -419,6 +802,258 @@ export const authenticateToken = async (req, res, next) => {
   } catch (error) {
     return res.status(403).json({ error: 'Token inválido' });
   }
+};
+
+// Middleware para verificar roles específicos
+export const requireRole = (allowedRoles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Usuário não autenticado' });
+    }
+
+    if (!allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({ 
+        error: 'Acesso negado',
+        required: allowedRoles,
+        current: req.user.role
+      });
+    }
+
+    next();
+  };
+};
+
+// Middleware para verificar acesso a escola específica
+export const checkSchoolAccess = async (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Usuário não autenticado' });
+  }
+
+  // Admin tem acesso a tudo
+  if (req.user.role === 'admin') {
+    return next();
+  }
+
+  // Professor só pode acessar sua escola
+  if (req.user.role === 'professor') {
+    const { escola } = req.params;
+    if (escola && escola !== req.user.escola) {
+      return res.status(403).json({ error: 'Acesso negado à escola especificada' });
+    }
+  }
+
+  // Aluno só pode acessar seus próprios dados
+  if (req.user.role === 'aluno') {
+    const { participanteId } = req.params;
+    if (participanteId && parseInt(participanteId) !== req.user.participante_id) {
+      return res.status(403).json({ error: 'Acesso negado aos dados especificados' });
+    }
+  }
+
+  next();
+};
+```
+
+#### 4.2 Sistema de Leituras Baseado em Roles
+
+```javascript
+// src/controllers/leituraController.js
+export const processarLeitura = async (req, res) => {
+  try {
+    const { role, id: userId, escola, participante_id } = req.user;
+    const resultado = await processarUmaLeitura(req.file.path);
+
+    // Determina se a leitura deve ser salva baseado no role
+    const shouldSave = determineSavePermission(role);
+    
+    if (shouldSave) {
+      // Salva leitura no banco
+      const leituraSalva = await salvarLeitura({
+        ...resultado.leitura,
+        user_id: userId,
+        escola: role === 'professor' ? escola : null,
+        participante_id: role === 'aluno' ? participante_id : null
+      });
+      
+      res.json({
+        success: true,
+        data: leituraSalva,
+        message: 'Leitura processada e salva com sucesso'
+      });
+    } else {
+      // Retorna resultado sem salvar (professores)
+      res.json({
+        success: true,
+        data: resultado.leitura,
+        message: 'Leitura processada (visualização temporária)',
+        temporary: true
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const determineSavePermission = (role) => {
+  const savePermissions = {
+    'aluno': true,     // Alunos salvam suas leituras
+    'professor': false, // Professores fazem leituras temporárias
+    'admin': true      // Admins salvam leituras
+  };
+  
+  return savePermissions[role] || false;
+};
+
+// Listar leituras baseado no role
+export const listarLeituras = async (req, res) => {
+  try {
+    const { role, escola, participante_id } = req.user;
+    let query = 'SELECT * FROM leituras l JOIN participantes p ON l.id_participante = p.id';
+    let params = [];
+
+    switch (role) {
+      case 'aluno':
+        // Aluno vê apenas suas leituras
+        query += ' WHERE l.id_participante = $1';
+        params = [participante_id];
+        break;
+        
+      case 'professor':
+        // Professor vê leituras de sua escola
+        query += ' WHERE p.escola = $1';
+        params = [escola];
+        break;
+        
+      case 'admin':
+        // Admin vê todas as leituras
+        break;
+        
+      default:
+        return res.status(403).json({ error: 'Role não reconhecido' });
+    }
+
+    query += ' ORDER BY l.created_at DESC';
+    const result = await pool.query(query, params);
+    
+    res.json({
+      success: true,
+      data: result.rows,
+      total: result.rows.length
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+```
+
+#### 4.3 Dashboard Personalizado por Role
+
+```javascript
+// src/controllers/dashboardController.js
+export const getDashboardData = async (req, res) => {
+  try {
+    const { role, escola, participante_id } = req.user;
+    let dashboardData = {};
+
+    switch (role) {
+      case 'aluno':
+        dashboardData = await getAlunoDashboard(participante_id);
+        break;
+        
+      case 'professor':
+        dashboardData = await getProfessorDashboard(escola);
+        break;
+        
+      case 'admin':
+        dashboardData = await getAdminDashboard();
+        break;
+        
+      default:
+        return res.status(403).json({ error: 'Role não reconhecido' });
+    }
+
+    res.json({
+      success: true,
+      data: dashboardData,
+      role
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const getAlunoDashboard = async (participanteId) => {
+  // Estatísticas do aluno
+  const leituras = await pool.query(
+    'SELECT * FROM leituras WHERE id_participante = $1 ORDER BY created_at DESC',
+    [participanteId]
+  );
+
+  const mediaGeral = await pool.query(
+    'SELECT AVG(nota) as media FROM leituras WHERE id_participante IS NOT NULL'
+  );
+
+  const minhasNotas = leituras.rows.map(l => l.nota);
+  const minhaNota = minhasNotas.length > 0 ? 
+    minhasNotas.reduce((a, b) => a + b, 0) / minhasNotas.length : 0;
+
+  return {
+    totalLeituras: leituras.rows.length,
+    minhaNota: minhaNota.toFixed(2),
+    mediaGeral: parseFloat(mediaGeral.rows[0].media || 0).toFixed(2),
+    acimaDaMedia: minhaNota > parseFloat(mediaGeral.rows[0].media || 0),
+    ultimasLeituras: leituras.rows.slice(0, 5),
+    graficoDesempenho: minhasNotas
+  };
+};
+
+const getProfessorDashboard = async (escola) => {
+  // Estatísticas da escola
+  const participantes = await pool.query(
+    'SELECT COUNT(*) as total FROM participantes WHERE escola = $1',
+    [escola]
+  );
+
+  const leituras = await pool.query(
+    `SELECT l.*, p.nome FROM leituras l 
+     JOIN participantes p ON l.id_participante = p.id 
+     WHERE p.escola = $1 ORDER BY l.created_at DESC`,
+    [escola]
+  );
+
+  const mediaEscola = await pool.query(
+    `SELECT AVG(l.nota) as media FROM leituras l 
+     JOIN participantes p ON l.id_participante = p.id 
+     WHERE p.escola = $1`,
+    [escola]
+  );
+
+  return {
+    totalParticipantes: parseInt(participantes.rows[0].total),
+    totalLeituras: leituras.rows.length,
+    mediaEscola: parseFloat(mediaEscola.rows[0].media || 0).toFixed(2),
+    ultimasLeituras: leituras.rows.slice(0, 10),
+    participantesAtivos: leituras.rows.length
+  };
+};
+
+const getAdminDashboard = async () => {
+  // Estatísticas gerais do sistema
+  const stats = await Promise.all([
+    pool.query('SELECT COUNT(*) as total FROM participantes'),
+    pool.query('SELECT COUNT(*) as total FROM leituras'),
+    pool.query('SELECT COUNT(*) as total FROM provas'),
+    pool.query('SELECT COUNT(DISTINCT escola) as total FROM participantes'),
+    pool.query('SELECT AVG(nota) as media FROM leituras')
+  ]);
+
+  return {
+    totalParticipantes: parseInt(stats[0].rows[0].total),
+    totalLeituras: parseInt(stats[1].rows[0].total),
+    totalProvas: parseInt(stats[2].rows[0].total),
+    totalEscolas: parseInt(stats[3].rows[0].total),
+    mediaGeral: parseFloat(stats[4].rows[0].media || 0).toFixed(2)
+  };
 };
 ```
 

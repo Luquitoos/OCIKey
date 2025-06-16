@@ -677,10 +677,64 @@ docker-compose down -v
 
 **Tecnologia**: Next.js 15 + React 19 + Tailwind CSS
 
-#### ✅ Sistema de Autenticação
-- **Login/Registro**: Interface moderna com validação
+#### ✅ Sistema de Autenticação e Registro
+
+**Sistema de Registro com Roles Diferenciadas**:
+- **Seleção de Cargo**: Durante o registro, o usuário escolhe entre Aluno, Professor ou Admin
+- **Interface Dinâmica**: A tela de registro muda de cor e campos conforme o tipo de cargo selecionado
+- **Campos Específicos**: Cada tipo de conta possui campos de preenchimento diferentes e específicos
+- **Validação por Role**: Sistema de validação adaptado para cada tipo de usuário
 - **Proteção de rotas**: Middleware de autenticação
 - **Gerenciamento de sessão**: Context API + localStorage
+
+**Tipos de Conta e Permissões**:
+
+**🎓 ALUNO**:
+- **Leituras**: Pode fazer leituras de provas e visualizar seu desempenho
+- **Visualização de Resultados**: Vê seus acertos e aproveitamento em cada prova
+- **Perfil Editável**: Pode modificar informações do seu próprio perfil
+- **Leitura de Outras Provas**: Pode fazer leitura de provas de outros participantes (nome do detentor será mostrado)
+- **Dashboard Personalizado**: Visualiza seu desempenho comparado com outros participantes
+- **Indicador de Performance**: Sistema mostra se ficou abaixo ou acima da média
+
+**👨‍🏫 PROFESSOR**:
+- **Gestão da Escola**: Visualiza todos os participantes da escola que representa
+- **Relatórios Escolares**: Acesso a relatório geral dos participantes de sua escola
+- **Visualização de Leituras**: Pode ver todas as leituras dos participantes de sua escola
+- **Acesso a Gabaritos**: Consegue visualizar gabaritos das provas (sem poder editar/deletar)
+- **Leituras Temporárias**: Pode fazer leituras para visualização imediata (não são salvas)
+- **Edição de Participantes**: Permite editar nomes dos participantes de sua escola
+- **Importação CSV**: Pode importar participantes via arquivo CSV
+
+**👑 ADMIN**:
+- **Controle Total**: Visualiza todos os participantes da olimpíada
+- **Relatórios Gerais**: Acesso a relatórios com informações gerais de todo o sistema
+- **Gestão Completa de Leituras**: Pode ver, editar e gerenciar todas as leituras
+- **Controle de Gabaritos**: Pode ver, editar e deletar gabaritos de provas
+- **Leituras Persistentes**: Suas leituras são salvas automaticamente no sistema
+- **Gestão Global de Participantes**: Pode alterar nomes de todos os participantes
+- **Importação CSV Completa**: Pode importar participantes de qualquer escola
+
+#### ✅ Sistema de Leitura Avançado
+
+**Processamento Flexível**:
+- **Leitura Múltipla**: Permite processar várias imagens simultaneamente
+- **Leitura Isolada**: Processamento individual de imagens conforme necessário
+- **Upload Dinâmico**: Interface para upload de imagens com drag & drop
+
+**Visualização de Resultados**:
+- **Interface de Gabarito**: Leitura é exibida como um gabarito visual
+- **Código de Cores Intuitivo**:
+  - 🟢 **Verde**: Alternativas corretas (circunferência verde)
+  - 🔴 **Vermelho**: Alternativas incorretas (circunferência vermelha)
+  - ⚪ **Cinza**: Erros de leitura ou campos vazios (circunferência cinza com opacidade reduzida)
+
+**Sistema de Feedback de Leitura**:
+- **✅ Sucesso (Erro 0)**: "Leitura realizada com sucesso" - Interface verde com dados completos
+- **⚠️ Erro Aztec (Erro 1)**: "Erro de leitura do código Aztec" - Alerta amarelo, dados parciais
+- **🔍 Erro de Área (Erro 2)**: "Imprecisão na identificação da área de leitura" - Alerta laranja
+- **❌ Erro Fatal (Erro 3)**: "Erro fatal durante a leitura" - Alerta vermelho, falha completa
+- **Mensagens Contextuais**: Sistema exibe detalhes específicos do erro e sugestões de correção
 
 #### ✅ Dashboard Administrativo
 - **Visão geral**: Estatísticas e métricas em tempo real
@@ -689,13 +743,14 @@ docker-compose down -v
 
 #### ✅ Gerenciamento de Participantes
 - **Listagem**: Tabela com paginação e busca
-- **CRUD completo**: Criar, editar e excluir participantes
-- **Importação CSV**: Interface para upload de arquivos
+- **CRUD por Permissão**: Criar, editar e excluir conforme role do usuário
+- **Importação CSV**: Interface para upload de arquivos (Professor/Admin)
 - **Filtros**: Por escola, nome, etc.
+- **Controle de Escola**: Professores veem apenas sua escola, Admins veem todos
 
 #### ✅ Gerenciamento de Provas
 - **Listagem de gabaritos**: Visualização clara dos gabaritos
-- **CRUD completo**: Criar, editar e excluir provas
+- **CRUD por Role**: Admins podem editar/deletar, Professores apenas visualizar
 - **Configuração de peso**: Interface para definir peso por questão
 - **Importação CSV**: Upload de gabaritos em lote
 
@@ -704,18 +759,19 @@ docker-compose down -v
 - **Upload múltiplo**: Processamento em lote
 - **Visualização em tempo real**: Progresso do processamento
 - **Edição de resultados**: Interface para correção manual
+- **Leituras por Role**: Alunos salvam suas leituras, Professores fazem leituras temporárias
 
 #### ✅ Visualização de Leituras
-- **Listagem completa**: Todas as leituras com filtros
-- **Detalhes da leitura**: Gabarito, acertos, nota
-- **Edição inline**: Correção rápida de leituras
-- **Exportação**: Download de resultados
+- **Listagem por Permissão**: Cada role vê leituras conforme suas permissões
+- **Detalhes da leitura**: Gabarito, acertos, nota com código de cores
+- **Edição por Role**: Admins podem editar todas, outros conforme permissões
+- **Exportação**: Download de resultados conforme acesso
 
 #### ✅ Relatórios e Estatísticas
-- **Dashboard de métricas**: Visão geral do desempenho
-- **Gráficos de desempenho**: Por prova, participante, escola
-- **Estatísticas detalhadas**: Médias, distribuições, etc.
-- **Filtros avançados**: Por período, prova, escola
+- **Dashboard de métricas**: Visão geral do desempenho por role
+- **Gráficos de desempenho**: Por prova, participante, escola (conforme acesso)
+- **Estatísticas detalhadas**: Médias, distribuições, comparações
+- **Filtros avançados**: Por período, prova, escola (adaptado por permissão)
 
 ### 🔧 Backend (API REST)
 
