@@ -7,7 +7,6 @@
     "start": "LD_LIBRARY_PATH=./biblioteca:$LD_LIBRARY_PATH node src/index.js",
     "dev": "LD_LIBRARY_PATH=./biblioteca:$LD_LIBRARY_PATH nodemon src/index.js",
     "build": "cd src/addon && node-gyp rebuild",
-    "install": "cd src/addon && node-gyp rebuild",
     "db:setup": "node src/config/setup-database.js",
     "db:seed": "node src/config/seed-database.js",
     "db:init": "npm run db:setup && npm run db:seed",

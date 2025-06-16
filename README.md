@@ -245,7 +245,17 @@ npm install
 npm run build
 ```
 
-4. **Configure o banco de dados:**
+4. **Inicie o backend:**
+- Para produção:
+```bash
+npm start
+```
+- Para desenvolvimento (com hot reload):
+```bash
+npm run dev
+```
+
+5. **Configure o banco de dados (primeira vez):**
 ```bash
 npm run db:init
 ```
