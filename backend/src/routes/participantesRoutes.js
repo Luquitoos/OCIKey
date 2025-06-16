@@ -24,8 +24,8 @@ const router = express.Router();
 // Importar participantes via CSV
 router.post('/import', authenticateToken, importarParticipantesCSV);
 
-// Listar escolas únicas
-router.get('/escolas', authenticateToken, listarEscolas);
+// Listar escolas únicas (público para permitir acesso durante registro)
+router.get('/escolas', listarEscolas);
 
 // Obter perfil do participante do usuário logado
 router.get('/meu-perfil', authenticateToken, meuPerfil);

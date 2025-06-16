@@ -73,8 +73,9 @@ export const validateUsername = (username) => {
     return { isValid: false, message: 'Nome de usuário não deve exceder 50 caracteres' };
   }
 
-  const alphanumSpaceRegex = /^[a-zA-Z0-9\s]+$/;
-  if (!alphanumSpaceRegex.test(username)) {
+  // Regex que aceita letras (incluindo acentuadas), números e espaços
+  const alphanumSpaceAccentRegex = /^[a-zA-ZÀ-ÿ0-9\s]+$/;
+  if (!alphanumSpaceAccentRegex.test(username)) {
     return { isValid: false, message: 'Nome de usuário deve conter apenas letras, números e espaços' };
   }
 

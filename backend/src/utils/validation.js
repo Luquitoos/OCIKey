@@ -44,9 +44,10 @@ const loginPasswordField = Joi.string()
 
 /*
  Campo de nome de usuário reutilizável com validações padrão
+ Aceita letras (incluindo acentuadas), números e espaços
  */
 const usernameField = Joi.string()
-  .pattern(/^[a-zA-Z0-9\s]+$/)
+  .pattern(/^[a-zA-ZÀ-ÿ0-9\s]+$/)
   .min(3)
   .max(50)
   .required()
