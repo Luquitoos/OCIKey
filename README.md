@@ -739,7 +739,7 @@ docker-compose down -v
 #### ✅ Dashboard Administrativo
 - **Visão geral**: Estatísticas e métricas em tempo real
 - **Navegação intuitiva**: Menu lateral responsivo
-- **Gr��ficos interativos**: Chart.js para visualização de dados
+- **Gráficos interativos**: Chart.js para visualização de dados
 
 #### ✅ Gerenciamento de Participantes
 - **Listagem**: Tabela com paginação e busca
