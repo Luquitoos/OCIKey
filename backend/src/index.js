@@ -13,18 +13,8 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT
 
-// Configuração de middlewares globais
-const corsOptions = {
-  origin: [
-    'https://oci-key.vercel.app',
-    'http://localhost:3000', // Para desenvolvimento local
-    'http://localhost:5173'  // Para Vite dev server
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-};
-app.use(cors(corsOptions)); // Habilita CORS com configurações específicas
+
+app.use(cors()); // Habilita CORS para todas as rotas
 app.use(express.json()); // Parser para JSON
 app.use(express.urlencoded({ extended: true })); // Parser para dados de formulário
 app.use(apiRateLimiter); // Rate limiting geral para todas as rotas
