@@ -102,7 +102,9 @@ export const listarProvas = async (req, res) => {
         
         res.json({
             success: true,
-            provas: rows
+            data: {
+                provas: rows
+            }
         });
     } catch (error) {
         console.error('Erro ao listar provas:', error);

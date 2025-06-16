@@ -6,6 +6,12 @@
   --primary-darker: #2d6a4c; /* Verde escuro */
   --secondary: #8f220e; /* Vermelho */
   --tertiary: #a36902; /* Ouro */
+  
+  /* Sombras */
+  --shadow-main: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -4px rgba(0, 0, 0, 0.1);
 }
 
 /* Reset do CSS feito pelo Next.js */

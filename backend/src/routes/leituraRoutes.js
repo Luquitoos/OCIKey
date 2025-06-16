@@ -1,20 +1,31 @@
 import express from 'express';
 import { 
     processarLeitura, 
-    processarMultiplasLeituras,
-    processarImagemUpload,
-    processarMultiplasImagensUpload
+    processarMultiplasLeituras, 
+    processarImagemUpload, 
+    processarMultiplasImagensUpload 
 } from '../controllers/leituraController.js';
-import { uploadSingle, uploadMultiple, handleUploadError } from '../middleware/upload.js';
+import { authenticateToken } from '../middleware/auth.js';
+import { uploadSingle, uploadMultiple } from '../middleware/upload.js';
 
 const router = express.Router();
 
-// Rotas para processamento via caminho de arquivo
-router.post('/process', processarLeitura);
-router.post('/process-multiple', processarMultiplasLeituras);
+/*
+ Rotas para leitura de gabaritos
+ Todas as rotas relacionadas ao processamento de imagens de gabaritos
+ Requer autenticação para todas as rotas
+*/
 
-// Rotas para processamento via upload
-router.post('/upload', uploadSingle, handleUploadError, processarImagemUpload);
-router.post('/upload-multiple', uploadMultiple, handleUploadError, processarMultiplasImagensUpload);
+// Processar leitura de uma imagem já salva no servidor
+router.post('/processar', authenticateToken, processarLeitura);
+
+// Processar múltiplas leituras de imagens já salvas no servidor
+router.post('/multiplas', authenticateToken, processarMultiplasLeituras);
+
+// Upload e processamento de uma única imagem
+router.post('/upload', authenticateToken, uploadSingle, processarImagemUpload);
+
+// Upload e processamento de múltiplas imagens
+router.post('/upload-multiplas', authenticateToken, uploadMultiple, processarMultiplasImagensUpload);
 
 export default router;

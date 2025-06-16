@@ -29,6 +29,11 @@ const createTables = async () => {
       )
     `);
 
+    // Atualizar coluna username para permitir até 50 caracteres se necessário
+    await pool.query(`
+      ALTER TABLE users ALTER COLUMN username TYPE VARCHAR(50);
+    `);
+
     /*
      Tabela de blacklist de tokens JWT
      Armazena tokens invalidados para logout seguro

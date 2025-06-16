@@ -1,39 +1,54 @@
 import express from 'express';
-import { authenticateToken } from '../middleware/auth.js';
-import {
+import { 
     importarParticipantesCSV,
     listarParticipantes,
     obterParticipante,
     criarParticipante,
     atualizarParticipante,
+    associarParticipante,
     deletarParticipante,
     listarEscolas,
-    associarParticipante,
-    meuPerfil
+    meuPerfil,
+    minhasEstatisticas
 } from '../controllers/participantesController.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Todas as rotas requerem autenticação
-router.use(authenticateToken);
+/*
+ Rotas para gerenciamento de participantes
+ Todas as rotas relacionadas ao CRUD de participantes
+ Requer autenticação para todas as rotas
+*/
 
-// Rota para importar participantes via CSV (API)
-router.post('/import', importarParticipantesCSV);
+// Importar participantes via CSV
+router.post('/import', authenticateToken, importarParticipantesCSV);
 
-// Rota para obter perfil do participante do usuário logado
-router.get('/meu-perfil', meuPerfil);
+// Listar escolas únicas
+router.get('/escolas', authenticateToken, listarEscolas);
 
-// Rota para listar escolas únicas
-router.get('/escolas', listarEscolas);
+// Obter perfil do participante do usuário logado
+router.get('/meu-perfil', authenticateToken, meuPerfil);
 
-// Rota para associar participante ao usuário logado
-router.put('/:id/associar', associarParticipante);
+// Obter estatísticas do participante do usuário logado
+router.get('/minhas-estatisticas', authenticateToken, minhasEstatisticas);
 
-// CRUD de participantes
-router.get('/', listarParticipantes);
-router.get('/:id', obterParticipante);
-router.post('/', criarParticipante);
-router.put('/:id', atualizarParticipante);
-router.delete('/:id', deletarParticipante);
+// Listar participantes
+router.get('/', authenticateToken, listarParticipantes);
+
+// Obter um participante específico
+router.get('/:id', authenticateToken, obterParticipante);
+
+// Criar um novo participante
+router.post('/', authenticateToken, criarParticipante);
+
+// Atualizar um participante existente
+router.put('/:id', authenticateToken, atualizarParticipante);
+
+// Associar participante ao usuário logado
+router.patch('/:id/associar', authenticateToken, associarParticipante);
+
+// Deletar um participante
+router.delete('/:id', authenticateToken, deletarParticipante);
 
 export default router;

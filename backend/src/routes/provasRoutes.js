@@ -1,5 +1,5 @@
 import express from 'express';
-import {
+import { 
     importarProvasCSV,
     listarProvas,
     obterProva,
@@ -7,17 +7,32 @@ import {
     atualizarProva,
     deletarProva
 } from '../controllers/provasController.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Rota para importar provas via CSV
-router.post('/import-csv', importarProvasCSV);
+/*
+ Rotas para gerenciamento de provas
+ Todas as rotas relacionadas ao CRUD de provas
+ Requer autenticação para todas as rotas
+*/
 
-// CRUD de provas
-router.get('/', listarProvas);
-router.get('/:id', obterProva);
-router.post('/', criarProva);
-router.put('/:id', atualizarProva);
-router.delete('/:id', deletarProva);
+// Importar provas via CSV
+router.post('/import', authenticateToken, importarProvasCSV);
+
+// Listar todas as provas
+router.get('/', authenticateToken, listarProvas);
+
+// Obter uma prova específica
+router.get('/:id', authenticateToken, obterProva);
+
+// Criar uma nova prova
+router.post('/', authenticateToken, criarProva);
+
+// Atualizar uma prova existente
+router.put('/:id', authenticateToken, atualizarProva);
+
+// Deletar uma prova
+router.delete('/:id', authenticateToken, deletarProva);
 
 export default router;

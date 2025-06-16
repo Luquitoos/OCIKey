@@ -89,25 +89,48 @@ export const importarParticipantesCSV = async (req, res) => {
     }
 };
 
-// Listar participantes (filtrados por usuário se não for admin)
+// Listar participantes (filtrados baseado no role do usuário)
 export const listarParticipantes = async (req, res) => {
     try {
         const { escola, page = 1, limit = 50, meus = false } = req.query;
         const userId = req.user.id;
         const userRole = req.user.role;
-        
+        const userEscola = req.user.escola;
+
+        // ABORDAGEM ESPECÍFICA PARA ADMIN - usando JOIN para filtrar na própria SQL
+        if (userRole === 'admin' && meus !== 'true') {
+            return await listarParticipantesAdmin(req, res, { escola, page, limit });
+        }
+
+        // ABORDAGEM PARA TEACHER E USER - lógica original que funciona
         let query = 'SELECT id, nome, escola, user_id, created_at FROM participantes';
         let params = [];
         let whereConditions = [];
 
-        // Se não for admin e meus=true, filtra apenas participantes do usuário
-        if (meus === 'true' || (userRole !== 'admin' && userRole !== 'teacher')) {
-            whereConditions.push(`user_id = $${params.length + 1}`);
+        // Parâmetro 'meus' força filtro por usuário independente do role
+        if (meus === 'true') {
+            whereConditions.push(`user_id = $1`);
             params.push(userId);
+        } else {
+            // Aplicar filtros baseados no role do usuário
+            if (userRole === 'teacher') {
+                // Teacher vê apenas participantes da mesma escola
+                if (userEscola) {
+                    whereConditions.push(`escola = $1`);
+                    params.push(userEscola);
+                } else {
+                    // Se teacher não tem escola definida, não vê nada
+                    whereConditions.push('1 = 0');
+                }
+            } else {
+                // User comum vê apenas seus próprios participantes
+                whereConditions.push(`user_id = $1`);
+                params.push(userId);
+            }
         }
 
-        // Filtro por escola se fornecido
-        if (escola) {
+        // Filtro adicional por escola se fornecido (disponível para teacher)
+        if (escola && userRole === 'teacher' && meus !== 'true') {
             whereConditions.push(`escola ILIKE $${params.length + 1}`);
             params.push(`%${escola}%`);
         }
@@ -124,8 +147,110 @@ export const listarParticipantes = async (req, res) => {
         const finalQuery = query + whereClause + orderClause + limitClause;
         const { rows } = await pool.query(finalQuery, params);
 
-        // Conta total para paginação
+        // Filtrar usuários do sistema no resultado (apenas para teacher)
+        let participantesFiltrados = rows;
+        if (userRole === 'teacher') {
+            // Buscar IDs de usuários que são admin ou teacher
+            const { rows: usuariosDoSistema } = await pool.query(
+                'SELECT id FROM users WHERE role IN ($1, $2)',
+                ['admin', 'teacher']
+            );
+            const idsUsuariosDoSistema = usuariosDoSistema.map(u => u.id);
+            
+            // Filtrar participantes que não são usuários do sistema
+            participantesFiltrados = rows.filter(participante => 
+                !participante.user_id || !idsUsuariosDoSistema.includes(participante.user_id)
+            );
+        }
+
+        // Conta total para paginação (também filtrada)
         const countQuery = 'SELECT COUNT(*) FROM participantes' + whereClause;
+        const countParams = params.slice(0, -2); // Remove limit e offset
+        const { rows: countRows } = await pool.query(countQuery, countParams);
+        let total = parseInt(countRows[0].count);
+
+        // Ajustar total removendo usuários do sistema se necessário (apenas para teacher)
+        if (userRole === 'teacher') {
+            const { rows: usuariosDoSistema } = await pool.query(
+                'SELECT id FROM users WHERE role IN ($1, $2)',
+                ['admin', 'teacher']
+            );
+            const idsUsuariosDoSistema = usuariosDoSistema.map(u => u.id);
+            
+            // Contar quantos participantes são usuários do sistema na query atual
+            if (idsUsuariosDoSistema.length > 0) {
+                const placeholders = idsUsuariosDoSistema.map((_, i) => `$${countParams.length + i + 1}`).join(',');
+                const countQueryCompleta = `
+                    SELECT COUNT(*) FROM participantes 
+                    ${whereClause} 
+                    AND user_id IS NOT NULL 
+                    AND user_id IN (${placeholders})
+                `;
+                const countParamsCompleta = [...countParams, ...idsUsuariosDoSistema];
+                
+                const { rows: countUsuariosSistema } = await pool.query(countQueryCompleta, countParamsCompleta);
+                total = total - parseInt(countUsuariosSistema[0].count);
+            }
+        }
+
+        res.json({
+            success: true,
+            data: {
+                participantes: participantesFiltrados,
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    total,
+                    pages: Math.ceil(total / limit)
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Erro ao listar participantes:', error);
+        res.status(500).json({ error: 'Erro interno ao listar participantes' });
+    }
+};
+
+// Função específica para ADMIN - usa JOIN para filtrar usuários do sistema na própria SQL
+const listarParticipantesAdmin = async (req, res, { escola, page, limit }) => {
+    try {
+        let baseQuery = `
+            SELECT p.id, p.nome, p.escola, p.user_id, p.created_at 
+            FROM participantes p
+            LEFT JOIN users u ON p.user_id = u.id
+        `;
+        
+        let whereConditions = [];
+        let params = [];
+
+        // Filtrar usuários do sistema diretamente na SQL
+        whereConditions.push(`(p.user_id IS NULL OR u.role NOT IN ('admin', 'teacher'))`);
+
+        // Filtro por escola se fornecido
+        if (escola) {
+            whereConditions.push(`p.escola ILIKE $${params.length + 1}`);
+            params.push(`%${escola}%`);
+        }
+
+        // Monta WHERE clause
+        const whereClause = whereConditions.length > 0 ? ' WHERE ' + whereConditions.join(' AND ') : '';
+
+        // Query principal com paginação
+        const offset = (page - 1) * limit;
+        const orderClause = ' ORDER BY p.nome';
+        const limitClause = ` LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+        params.push(limit, offset);
+
+        const finalQuery = baseQuery + whereClause + orderClause + limitClause;
+        const { rows } = await pool.query(finalQuery, params);
+
+        // Query para contar total (sem paginação)
+        const countQuery = `
+            SELECT COUNT(*) as count
+            FROM participantes p
+            LEFT JOIN users u ON p.user_id = u.id
+            ${whereClause}
+        `;
         const countParams = params.slice(0, -2); // Remove limit e offset
         const { rows: countRows } = await pool.query(countQuery, countParams);
         const total = parseInt(countRows[0].count);
@@ -143,7 +268,7 @@ export const listarParticipantes = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Erro ao listar participantes:', error);
+        console.error('Erro ao listar participantes (admin):', error);
         res.status(500).json({ error: 'Erro interno ao listar participantes' });
     }
 };
@@ -154,6 +279,7 @@ export const obterParticipante = async (req, res) => {
         const { id } = req.params;
         const userId = req.user.id;
         const userRole = req.user.role;
+        const userEscola = req.user.escola;
         
         if (isNaN(id)) {
             return res.status(400).json({ error: 'ID do participante deve ser um número' });
@@ -162,8 +288,20 @@ export const obterParticipante = async (req, res) => {
         let query = 'SELECT id, nome, escola, user_id, created_at FROM participantes WHERE id = $1';
         let params = [id];
 
-        // Se não for admin/teacher, só pode ver seus próprios participantes
-        if (userRole !== 'admin' && userRole !== 'teacher') {
+        // Aplicar filtros baseados no role
+        if (userRole === 'admin') {
+            // Admin pode ver qualquer participante - sem filtros adicionais
+        } else if (userRole === 'teacher') {
+            // Teacher só pode ver participantes da mesma escola
+            if (userEscola) {
+                query += ' AND escola = $2';
+                params.push(userEscola);
+            } else {
+                // Se teacher não tem escola, não pode ver nada
+                query += ' AND 1 = 0';
+            }
+        } else {
+            // User só pode ver seus próprios participantes
             query += ' AND user_id = $2';
             params.push(userId);
         }
@@ -231,6 +369,7 @@ export const atualizarParticipante = async (req, res) => {
         const { nome, escola } = req.body;
         const userId = req.user.id;
         const userRole = req.user.role;
+        const userEscola = req.user.escola;
         
         if (isNaN(id)) {
             return res.status(400).json({ error: 'ID do participante deve ser um número' });
@@ -241,10 +380,23 @@ export const atualizarParticipante = async (req, res) => {
         }
 
         // Verifica se o participante existe e se o usuário tem permissão
-        let checkQuery = 'SELECT id, user_id FROM participantes WHERE id = $1';
+        let checkQuery = 'SELECT id, user_id, escola FROM participantes WHERE id = $1';
         let checkParams = [id];
 
-        if (userRole !== 'admin' && userRole !== 'teacher') {
+        // Aplicar filtros baseados no role
+        if (userRole === 'admin') {
+            // Admin pode atualizar qualquer participante - sem filtros adicionais
+        } else if (userRole === 'teacher') {
+            // Teacher só pode atualizar participantes da mesma escola
+            if (userEscola) {
+                checkQuery += ' AND escola = $2';
+                checkParams.push(userEscola);
+            } else {
+                // Se teacher não tem escola, não pode atualizar nada
+                checkQuery += ' AND 1 = 0';
+            }
+        } else {
+            // User só pode atualizar seus próprios participantes
             checkQuery += ' AND user_id = $2';
             checkParams.push(userId);
         }
@@ -339,6 +491,7 @@ export const deletarParticipante = async (req, res) => {
         const { id } = req.params;
         const userId = req.user.id;
         const userRole = req.user.role;
+        const userEscola = req.user.escola;
         
         if (isNaN(id)) {
             return res.status(400).json({ error: 'ID do participante deve ser um número' });
@@ -348,7 +501,20 @@ export const deletarParticipante = async (req, res) => {
         let deleteQuery = 'DELETE FROM participantes WHERE id = $1';
         let deleteParams = [id];
 
-        if (userRole !== 'admin' && userRole !== 'teacher') {
+        // Aplicar filtros baseados no role
+        if (userRole === 'admin') {
+            // Admin pode deletar qualquer participante - sem filtros adicionais
+        } else if (userRole === 'teacher') {
+            // Teacher só pode deletar participantes da mesma escola
+            if (userEscola) {
+                deleteQuery += ' AND escola = $2';
+                deleteParams.push(userEscola);
+            } else {
+                // Se teacher não tem escola, não pode deletar nada
+                deleteQuery += ' AND 1 = 0';
+            }
+        } else {
+            // User só pode deletar seus próprios participantes
             deleteQuery += ' AND user_id = $2';
             deleteParams.push(userId);
         }
@@ -378,7 +544,7 @@ export const deletarParticipante = async (req, res) => {
 export const listarEscolas = async (req, res) => {
     try {
         const { rows } = await pool.query(
-            'SELECT DISTINCT escola FROM participantes ORDER BY escola'
+            'SELECT DISTINCT escola FROM participantes WHERE escola IS NOT NULL AND escola != \'\' ORDER BY escola'
         );
         
         res.json({
@@ -419,5 +585,115 @@ export const meuPerfil = async (req, res) => {
     } catch (error) {
         console.error('Erro ao obter perfil do participante:', error);
         res.status(500).json({ error: 'Erro interno ao obter perfil' });
+    }
+};
+
+// Obter estatísticas do participante do usuário logado
+export const minhasEstatisticas = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { id_prova } = req.query;
+        
+        // Primeiro, obter o participante do usuário
+        const { rows: participanteRows } = await pool.query(
+            'SELECT id, nome FROM participantes WHERE user_id = $1',
+            [userId]
+        );
+        
+        if (participanteRows.length === 0) {
+            return res.status(404).json({ 
+                success: false,
+                error: 'Você ainda não tem um perfil de participante associado' 
+            });
+        }
+
+        const participanteId = participanteRows[0].id;
+        const participanteNome = participanteRows[0].nome;
+
+        // Estatísticas gerais
+        const { rows: estatisticasGerais } = await pool.query(`
+            SELECT 
+                COUNT(DISTINCT id_prova) as provas_realizadas,
+                COUNT(*) as total_leituras,
+                AVG(nota) as media_notas,
+                SUM(acertos) as total_acertos
+            FROM leituras 
+            WHERE id_participante = $1
+        `, [participanteId]);
+
+        // Se uma prova específica foi solicitada
+        let estatisticasProva = null;
+        let mediaGeral = null;
+        let totalQuestoes = null;
+
+        if (id_prova) {
+            // Estatísticas da prova específica - pegar a melhor leitura (menor erro)
+            const { rows: provaStats } = await pool.query(`
+                SELECT 
+                    l.acertos,
+                    l.nota,
+                    l.erro,
+                    p.gabarito
+                FROM leituras l
+                JOIN provas p ON l.id_prova = p.id
+                WHERE l.id_participante = $1 AND l.id_prova = $2
+                ORDER BY l.erro ASC, l.created_at DESC
+                LIMIT 1
+            `, [participanteId, id_prova]);
+
+            if (provaStats.length > 0) {
+                const gabarito = provaStats[0].gabarito;
+                totalQuestoes = gabarito ? gabarito.length : 20;
+                
+                estatisticasProva = {
+                    acertos: provaStats[0].acertos,
+                    nota: parseFloat(provaStats[0].nota),
+                    total_questoes: totalQuestoes,
+                    percentual: (provaStats[0].acertos / totalQuestoes) * 100
+                };
+
+                // Média geral da prova (todos os participantes) - considerar melhor leitura de cada participante
+                const { rows: mediaGeralRows } = await pool.query(`
+                    SELECT AVG(melhor_leitura.acertos) as media_acertos
+                    FROM (
+                        SELECT DISTINCT ON (id_participante) 
+                            id_participante, 
+                            acertos
+                        FROM leituras 
+                        WHERE id_prova = $1
+                        ORDER BY id_participante, erro ASC, created_at DESC
+                    ) melhor_leitura
+                `, [id_prova]);
+
+                if (mediaGeralRows.length > 0) {
+                    mediaGeral = {
+                        media_acertos: parseFloat(mediaGeralRows[0].media_acertos),
+                        percentual_medio: (parseFloat(mediaGeralRows[0].media_acertos) / totalQuestoes) * 100
+                    };
+                }
+            }
+        }
+
+        res.json({
+            success: true,
+            data: {
+                participante: {
+                    id: participanteId,
+                    nome: participanteNome
+                },
+                estatisticas_gerais: {
+                    provas_realizadas: parseInt(estatisticasGerais[0].provas_realizadas) || 0,
+                    total_leituras: parseInt(estatisticasGerais[0].total_leituras) || 0,
+                    media_notas: parseFloat(estatisticasGerais[0].media_notas) || 0,
+                    total_acertos: parseInt(estatisticasGerais[0].total_acertos) || 0
+                },
+                estatisticas_prova: estatisticasProva,
+                media_geral: mediaGeral,
+                total_questoes: totalQuestoes
+            }
+        });
+    } catch (error) {
+        console.error('Erro ao obter estatísticas:', error);
+        res.status(500).json({ error: 'Erro interno ao obter estatísticas' });
     }
 };

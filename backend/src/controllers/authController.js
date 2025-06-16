@@ -41,13 +41,37 @@ export const register = async (req, res) => {
     // Verifica se já existe usuário com este email
     const existingUser = await User.findByEmail(email);
     if (existingUser) {
-      return res.status(400).json(errorResponse(responses.EMAIL_EXISTS));
+      return res.status(400).json(errorResponse(responses.EMAIL_EXISTS, [{
+        field: 'email',
+        message: 'Este email já está sendo usado por outro usuário',
+        value: email
+      }]));
     }
 
     // Verifica se já existe usuário com este nome de usuário
     const existingUsername = await User.findByUsername(username);
     if (existingUsername) {
-      return res.status(400).json(errorResponse(responses.USERNAME_TAKEN));
+      return res.status(400).json(errorResponse(responses.USERNAME_TAKEN, [{
+        field: 'username',
+        message: 'Este nome de usuário já está sendo usado',
+        value: username
+      }]));
+    }
+
+    // Validação especial para professores: verificar se a escola existe na lista
+    if (role === 'teacher') {
+      const { rows: schoolExists } = await pool.query(
+        'SELECT DISTINCT escola FROM participantes WHERE escola IS NOT NULL AND escola != \'\' AND escola = $1',
+        [escola]
+      );
+      
+      if (schoolExists.length === 0) {
+        return res.status(400).json(errorResponse('Dados inválidos', [{
+          field: 'escola',
+          message: 'Selecione uma instituição válida da lista',
+          value: escola
+        }]));
+      }
     }
 
     // Cria novo usuário no banco de dados
@@ -92,13 +116,21 @@ export const login = async (req, res) => {
     // Busca usuário pelo email no banco de dados
     const user = await User.findByEmail(email);
     if (!user) {
-      return res.status(401).json(errorResponse(responses.INVALID_CREDENTIALS));
+      return res.status(401).json(errorResponse('Credenciais inválidas', [{
+        field: 'email',
+        message: 'Conta não encontrada. Verifique o email ou registre-se.',
+        value: email
+      }]));
     }
 
     // Valida a senha fornecida com a hash armazenada
     const isValidPassword = await User.validatePassword(password, user.password);
     if (!isValidPassword) {
-      return res.status(401).json(errorResponse(responses.INVALID_CREDENTIALS));
+      return res.status(401).json(errorResponse('Credenciais inválidas', [{
+        field: 'password',
+        message: 'Senha incorreta. Verifique sua senha e tente novamente.',
+        value: null // Não retornar a senha por segurança
+      }]));
     }
 
     // Gera token JWT para o usuário autenticado

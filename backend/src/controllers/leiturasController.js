@@ -1,6 +1,6 @@
 import { pool } from '../config/database-config.js';
 
-// Listar leituras (filtradas por usuário se não for admin)
+// Listar leituras (filtradas baseado no role do usuário)
 export const listarLeituras = async (req, res) => {
     try {
         const { 
@@ -14,6 +14,7 @@ export const listarLeituras = async (req, res) => {
         
         const userId = req.user.id;
         const userRole = req.user.role;
+        const userEscola = req.user.escola;
         
         let query = `
             SELECT 
@@ -29,10 +30,28 @@ export const listarLeituras = async (req, res) => {
         let params = [];
         let whereConditions = [];
 
-        // Se não for admin/teacher e meus=true, filtra apenas leituras dos participantes do usuário
-        if (meus === 'true' || (userRole !== 'admin' && userRole !== 'teacher')) {
+        // Parâmetro 'meus' força filtro por usuário independente do role
+        if (meus === 'true') {
             whereConditions.push(`p.user_id = $${params.length + 1}`);
             params.push(userId);
+        } else {
+            // Aplicar filtros baseados no role do usuário
+            if (userRole === 'admin') {
+                // Admin vê tudo - sem filtros adicionais
+            } else if (userRole === 'teacher') {
+                // Teacher vê apenas leituras de participantes da mesma escola
+                if (userEscola) {
+                    whereConditions.push(`p.escola = $${params.length + 1}`);
+                    params.push(userEscola);
+                } else {
+                    // Se teacher não tem escola definida, não vê nada
+                    whereConditions.push('1 = 0'); // Condição que nunca é verdadeira
+                }
+            } else {
+                // User comum vê apenas leituras dos seus participantes
+                whereConditions.push(`p.user_id = $${params.length + 1}`);
+                params.push(userId);
+            }
         }
 
         // Filtros opcionais
@@ -118,6 +137,7 @@ export const obterLeitura = async (req, res) => {
         const { id } = req.params;
         const userId = req.user.id;
         const userRole = req.user.role;
+        const userEscola = req.user.escola;
         
         if (isNaN(id)) {
             return res.status(400).json({ error: 'ID da leitura deve ser um número' });
@@ -137,8 +157,20 @@ export const obterLeitura = async (req, res) => {
         
         let params = [id];
 
-        // Se não for admin/teacher, só pode ver leituras dos seus participantes
-        if (userRole !== 'admin' && userRole !== 'teacher') {
+        // Aplicar filtros baseados no role
+        if (userRole === 'admin') {
+            // Admin pode ver qualquer leitura - sem filtros adicionais
+        } else if (userRole === 'teacher') {
+            // Teacher só pode ver leituras de participantes da mesma escola
+            if (userEscola) {
+                query += ' AND p.escola = $2';
+                params.push(userEscola);
+            } else {
+                // Se teacher não tem escola, não pode ver nada
+                query += ' AND 1 = 0';
+            }
+        } else {
+            // User só pode ver leituras dos seus participantes
             query += ' AND p.user_id = $2';
             params.push(userId);
         }
@@ -189,6 +221,7 @@ export const editarLeitura = async (req, res) => {
         const { id_prova, id_participante, gabarito } = req.body;
         const userId = req.user.id;
         const userRole = req.user.role;
+        const userEscola = req.user.escola;
         
         if (isNaN(id)) {
             return res.status(400).json({ error: 'ID da leitura deve ser um número' });
@@ -196,14 +229,27 @@ export const editarLeitura = async (req, res) => {
 
         // Verifica se a leitura existe e se o usuário tem permissão
         let checkQuery = `
-            SELECT l.id, l.id_participante, p.user_id 
+            SELECT l.id, l.id_participante, p.user_id, p.escola 
             FROM leituras l
             LEFT JOIN participantes p ON l.id_participante = p.id
             WHERE l.id = $1
         `;
         let checkParams = [id];
 
-        if (userRole !== 'admin' && userRole !== 'teacher') {
+        // Aplicar filtros baseados no role
+        if (userRole === 'admin') {
+            // Admin pode editar qualquer leitura - sem filtros adicionais
+        } else if (userRole === 'teacher') {
+            // Teacher só pode editar leituras de participantes da mesma escola
+            if (userEscola) {
+                checkQuery += ' AND p.escola = $2';
+                checkParams.push(userEscola);
+            } else {
+                // Se teacher não tem escola, não pode editar nada
+                checkQuery += ' AND 1 = 0';
+            }
+        } else {
+            // User só pode editar leituras dos seus participantes
             checkQuery += ' AND p.user_id = $2';
             checkParams.push(userId);
         }
@@ -312,19 +358,35 @@ export const deletarLeitura = async (req, res) => {
         const { id } = req.params;
         const userId = req.user.id;
         const userRole = req.user.role;
+        const userEscola = req.user.escola;
         
         if (isNaN(id)) {
             return res.status(400).json({ error: 'ID da leitura deve ser um número' });
         }
 
         // Verifica permissão antes de deletar
-        let deleteQuery = `
-            DELETE FROM leituras 
-            WHERE id = $1
-        `;
+        let deleteQuery = `DELETE FROM leituras WHERE id = $1`;
         let deleteParams = [id];
 
-        if (userRole !== 'admin' && userRole !== 'teacher') {
+        // Aplicar filtros baseados no role
+        if (userRole === 'admin') {
+            // Admin pode deletar qualquer leitura - sem filtros adicionais
+        } else if (userRole === 'teacher') {
+            // Teacher só pode deletar leituras de participantes da mesma escola
+            if (userEscola) {
+                deleteQuery = `
+                    DELETE FROM leituras 
+                    WHERE id = $1 AND id_participante IN (
+                        SELECT id FROM participantes WHERE escola = $2
+                    )
+                `;
+                deleteParams.push(userEscola);
+            } else {
+                // Se teacher não tem escola, não pode deletar nada
+                deleteQuery = `DELETE FROM leituras WHERE id = $1 AND 1 = 0`;
+            }
+        } else {
+            // User só pode deletar leituras dos seus participantes
             deleteQuery = `
                 DELETE FROM leituras 
                 WHERE id = $1 AND id_participante IN (
@@ -360,12 +422,25 @@ export const estatisticasLeituras = async (req, res) => {
     try {
         const userId = req.user.id;
         const userRole = req.user.role;
+        const userEscola = req.user.escola;
         
         let whereClause = '';
         let params = [];
 
-        // Se não for admin/teacher, filtra apenas leituras dos participantes do usuário
-        if (userRole !== 'admin' && userRole !== 'teacher') {
+        // Aplicar filtros baseados no role
+        if (userRole === 'admin') {
+            // Admin vê estatísticas de tudo - sem filtros
+        } else if (userRole === 'teacher') {
+            // Teacher vê estatísticas de participantes da mesma escola
+            if (userEscola) {
+                whereClause = 'WHERE p.escola = $1';
+                params.push(userEscola);
+            } else {
+                // Se teacher não tem escola, não vê nada
+                whereClause = 'WHERE 1 = 0';
+            }
+        } else {
+            // User vê estatísticas dos seus participantes
             whereClause = 'WHERE p.user_id = $1';
             params.push(userId);
         }
@@ -383,8 +458,55 @@ export const estatisticasLeituras = async (req, res) => {
             ${whereClause}
         `;
 
-        const { rows } = await pool.query(query, params);
-        const stats = rows[0];
+        // Participantes únicos
+        const queryParticipantes = `
+            SELECT COUNT(DISTINCT l.id_participante) as participantes_unicos
+            FROM leituras l
+            LEFT JOIN participantes p ON l.id_participante = p.id
+            ${whereClause}
+        `;
+        // Provas distintas
+        const queryProvas = `
+            SELECT COUNT(DISTINCT l.id_prova) as provas_distintas
+            FROM leituras l
+            LEFT JOIN participantes p ON l.id_participante = p.id
+            ${whereClause}
+        `;
+        // Prova com melhor média
+        const queryMelhorProva = `
+            SELECT l.id_prova, AVG(l.nota) as media
+            FROM leituras l
+            LEFT JOIN participantes p ON l.id_participante = p.id
+            ${whereClause}
+            GROUP BY l.id_prova
+            ORDER BY media DESC
+            LIMIT 1
+        `;
+        // Moda das notas
+        const queryModaNota = `
+            SELECT l.nota, COUNT(*) as freq
+            FROM leituras l
+            LEFT JOIN participantes p ON l.id_participante = p.id
+            ${whereClause}
+            GROUP BY l.nota
+            ORDER BY freq DESC, l.nota DESC
+            LIMIT 1
+        `;
+
+        const [statsRows, partRows, provasRows, melhorProvaRows, modaNotaRows] = await Promise.all([
+            pool.query(query, params),
+            pool.query(queryParticipantes, params),
+            pool.query(queryProvas, params),
+            pool.query(queryMelhorProva, params),
+            pool.query(queryModaNota, params)
+        ]);
+        const stats = statsRows.rows[0];
+        const participantes_unicos = partRows.rows[0]?.participantes_unicos || 0;
+        const provas_distintas = provasRows.rows[0]?.provas_distintas || 0;
+        const melhor_prova = melhorProvaRows.rows[0]?.id_prova || null;
+        const melhor_prova_media = melhorProvaRows.rows[0]?.media ? parseFloat(melhorProvaRows.rows[0].media).toFixed(2) : null;
+        const moda_nota = modaNotaRows.rows[0]?.nota !== undefined ? parseFloat(modaNotaRows.rows[0].nota) : null;
+        const moda_nota_freq = modaNotaRows.rows[0]?.freq !== undefined ? parseInt(modaNotaRows.rows[0].freq) : null;
 
         res.json({
             success: true,
@@ -397,7 +519,13 @@ export const estatisticasLeituras = async (req, res) => {
                         ((stats.leituras_sucesso / stats.total_leituras) * 100).toFixed(2) : 0,
                     nota_media: stats.nota_media ? parseFloat(stats.nota_media).toFixed(2) : 0,
                     nota_maxima: stats.nota_maxima ? parseFloat(stats.nota_maxima) : 0,
-                    nota_minima: stats.nota_minima ? parseFloat(stats.nota_minima) : 0
+                    nota_minima: stats.nota_minima ? parseFloat(stats.nota_minima) : 0,
+                    participantes_unicos: parseInt(participantes_unicos),
+                    provas_distintas: parseInt(provas_distintas),
+                    melhor_prova: melhor_prova,
+                    melhor_prova_media: melhor_prova_media,
+                    moda_nota: moda_nota,
+                    moda_nota_freq: moda_nota_freq
                 }
             }
         });

@@ -2,34 +2,84 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import styles from "@/components/styles/auth.module.css";
 import AuthLayout from "@/components/AuthLayout";
 import AuthHeader from "@/components/AuthHeader";
 import AuthFooter from "@/components/AuthFooter";
 import Input from "@/components/ui/Input";
+import ValidationErrors from "@/components/ui/ValidationErrors";
 import { AtSymbolIcon, LockClosedIcon } from "@heroicons/react/24/solid";
+import { validateEmail, validatePassword, extractApiErrors } from "@/utils/validation";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(null);
+  const [errors, setErrors] = useState([]);
+  const [fieldErrors, setFieldErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const { login } = useAuth();
+  const router = useRouter();
 
-  // === INÍCIO DA ZONA DE INTEGRAÇÃO COM O BACK-END ===
+  // Validação em tempo real para email
+  const handleEmailBlur = () => {
+    const validation = validateEmail(email);
+    setFieldErrors(prev => ({
+      ...prev,
+      email: validation.isValid ? null : validation.message
+    }));
+  };
+
+  // Validação em tempo real para senha
+  const handlePasswordBlur = () => {
+    const validation = validatePassword(password, false);
+    setFieldErrors(prev => ({
+      ...prev,
+      password: validation.isValid ? null : validation.message
+    }));
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setIsLoading(true);
-    setError(null);
+    setErrors([]);
+    setFieldErrors({});
+
+    // Validação do lado do cliente
+    const emailValidation = validateEmail(email);
+    const passwordValidation = validatePassword(password, false);
+
+    const clientErrors = [];
+    if (!emailValidation.isValid) {
+      clientErrors.push({ field: 'email', message: emailValidation.message });
+    }
+    if (!passwordValidation.isValid) {
+      clientErrors.push({ field: 'password', message: passwordValidation.message });
+    }
+
+    if (clientErrors.length > 0) {
+      setErrors(clientErrors);
+      setIsLoading(false);
+      return;
+    }
+    
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("Login com:", { email, password });
+      const result = await login(email, password);
+      if (result.success) {
+        router.push('/dashboard');
+      } else {
+        // Extrair erros da resposta da API
+        const apiErrors = extractApiErrors(result);
+        setErrors(apiErrors);
+      }
     } catch (err) {
-      setError(err.message || "Ocorreu um erro inesperado.");
+      console.error('Erro no login:', err);
+      setErrors([{ message: err.message || "Ocorreu um erro inesperado." }]);
     } finally {
       setIsLoading(false);
     }
   };
-  // === FIM DA ZONA DE INTEGRAÇÃO COM O BACK-END ===
 
   return (
     <AuthLayout>
@@ -47,6 +97,10 @@ export default function LoginPage() {
             icon={AtSymbolIcon}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            onBlur={handleEmailBlur}
+            placeholder="Digite seu email cadastrado"
+            error={fieldErrors.email}
+            success={email && !fieldErrors.email}
           />
           <Input
             id="password"
@@ -55,9 +109,13 @@ export default function LoginPage() {
             icon={LockClosedIcon}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            onBlur={handlePasswordBlur}
+            placeholder="Digite sua senha"
+            error={fieldErrors.password}
+            success={password && !fieldErrors.password}
           />
 
-          {error && <p className={styles.errorMessage}>{error}</p>}
+          <ValidationErrors errors={errors} />
 
           <div className={styles.buttonGroup}>
             <Link

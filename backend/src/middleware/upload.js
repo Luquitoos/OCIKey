@@ -53,6 +53,9 @@ export const uploadSingle = upload.single('imagem');
    Adiciona os arquivos em req.files (array) para uso nos controllers */
 export const uploadMultiple = upload.array('imagens');
 
+/* Exporta a instância do upload para uso direto nos controllers */
+export { upload };
+
 /* Middleware para tratamento de erros específicos do Multer
    Captura erros que podem ocorrer durante o upload
    MulterError: classe de erro específica do Multer */

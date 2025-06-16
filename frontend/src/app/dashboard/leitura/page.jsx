@@ -1,0 +1,339 @@
+"use client";
+
+import { useState, useRef } from 'react';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import DashboardLayout from '@/components/DashboardLayout';
+import GabaritoDisplay from '@/components/GabaritoDisplay';
+import apiService from '@/services/api';
+import {
+  CloudArrowUpIcon,
+  PhotoIcon,
+  XMarkIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+} from '@heroicons/react/24/outline';
+import styles from '@/components/styles/dashboard.module.css';
+
+export default function LeituraPage() {
+  const [files, setFiles] = useState([]);
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    const imageFiles = droppedFiles.filter(file => 
+      file.type.startsWith('image/') && 
+      ['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)
+    );
+    
+    setFiles(prev => [...prev, ...imageFiles]);
+  };
+
+  const handleFileSelect = (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    const imageFiles = selectedFiles.filter(file => 
+      file.type.startsWith('image/') && 
+      ['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)
+    );
+    
+    setFiles(prev => [...prev, ...imageFiles]);
+  };
+
+  const removeFile = (index) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const processImages = async () => {
+    if (files.length === 0) return;
+    
+    setLoading(true);
+    setResults([]);
+    
+    try {
+      if (files.length === 1) {
+        // Processar uma única imagem
+        const result = await apiService.uploadImagem(files[0]);
+        setResults([{
+          arquivo_original: files[0].name,
+          ...result
+        }]);
+      } else {
+        // Processar múltiplas imagens
+        const result = await apiService.uploadMultiplasImagens(files);
+        setResults(result.resultados || []);
+      }
+    } catch (error) {
+      console.error('Erro ao processar imagens:', error);
+      alert('Erro ao processar imagens: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getErrorMessage = (errorCode) => {
+    switch (errorCode) {
+      case 0: return 'Leitura bem-sucedida';
+      case 1: return 'Erro no código Aztec';
+      case 2: return 'Imprecisão na leitura';
+      case 3: return 'Erro fatal na leitura';
+      default: return 'Erro desconhecido';
+    }
+  };
+
+  const formatNota = (nota) => {
+    const num = parseFloat(nota);
+    return isNaN(num) ? '0.00' : num.toFixed(2);
+  };
+
+  
+  return (
+    <ProtectedRoute>
+      <DashboardLayout currentPage="Leitura de Gabaritos">
+        <div className={styles.grid}>
+          {/* Upload Area */}
+          <div className={styles.card}>
+            <div className={styles.cardHeader}>
+              <h2 className={styles.cardTitle}>Upload de Imagens</h2>
+            </div>
+            
+            <div
+              className={`upload-area ${dragActive ? 'drag-active' : ''}`}
+              style={{
+                border: `2px dashed ${dragActive ? 'var(--primary)' : '#d1d5db'}`,
+                borderRadius: '1rem',
+                padding: '3rem 2rem',
+                textAlign: 'center',
+                backgroundColor: dragActive ? '#f0f9ff' : '#f9fafb',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <CloudArrowUpIcon 
+                style={{ 
+                  width: '3rem', 
+                  height: '3rem', 
+                  margin: '0 auto 1rem', 
+                  color: dragActive ? 'var(--primary)' : '#9ca3af' 
+                }} 
+              />
+              <p style={{ fontSize: '1.125rem', fontWeight: '600', color: '#374151', margin: '0 0 0.5rem 0' }}>
+                {dragActive ? 'Solte as imagens aqui' : 'Clique ou arraste imagens aqui'}
+              </p>
+              <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
+                PNG, JPG ou JPEG (máx. 10MB cada)
+              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/png,image/jpeg,image/jpg"
+                onChange={handleFileSelect}
+                style={{ display: 'none' }}
+              />
+            </div>
+
+            {/* Lista de Arquivos */}
+            {files.length > 0 && (
+              <div style={{ marginTop: '1.5rem' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '1rem', color: 'var(--background)' }}>
+                  Arquivos Selecionados ({files.length})
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {files.map((file, index) => (
+                    <div 
+                      key={index}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0.75rem',
+                        backgroundColor: '#f3f4f6',
+                        borderRadius: '0.5rem',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <PhotoIcon style={{ width: '1.25rem', height: '1.25rem', color: '#6b7280' }} />
+                        <span style={{ fontSize: '0.875rem', color: '#374151' }}>{file.name}</span>
+                        <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
+                          ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                        </span>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeFile(index);
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '0.25rem',
+                          borderRadius: '0.25rem',
+                          color: '#dc2626',
+                        }}
+                      >
+                        <XMarkIcon style={{ width: '1rem', height: '1rem' }} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                
+                <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem' }}>
+                  <button
+                    onClick={processImages}
+                    disabled={loading}
+                    className={`${styles.button} ${styles.buttonPrimary}`}
+                    style={{ opacity: loading ? 0.6 : 1 }}
+                  >
+                    {loading ? 'Processando...' : 'Processar Imagens'}
+                  </button>
+                  <button
+                    onClick={() => setFiles([])}
+                    className={`${styles.button} ${styles.buttonOutline}`}
+                  >
+                    Limpar Lista
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Resultados */}
+          {results.length > 0 && (
+            <div className={styles.card}>
+              <div className={styles.cardHeader}>
+                <h2 className={styles.cardTitle}>Resultados da Leitura</h2>
+              </div>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {results.map((result, index) => (
+                  <div 
+                    key={index}
+                    style={{
+                      padding: '1.5rem',
+                      border: `2px solid ${result.leitura?.erro === 0 ? '#16a34a' : '#dc2626'}`,
+                      borderRadius: '0.75rem',
+                      backgroundColor: result.leitura?.erro === 0 ? '#f0fdf4' : '#fef2f2',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                      {result.leitura?.erro === 0 ? (
+                        <CheckCircleIcon style={{ width: '1.5rem', height: '1.5rem', color: '#16a34a' }} />
+                      ) : (
+                        <ExclamationTriangleIcon style={{ width: '1.5rem', height: '1.5rem', color: '#dc2626' }} />
+                      )}
+                      <h3 style={{ fontSize: '1.125rem', fontWeight: '600', margin: 0, color: 'var(--background)' }}>
+                        {result.arquivo_original}
+                      </h3>
+                    </div>
+                    
+                    {result.leitura && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                        <div>
+                          <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', margin: '0 0 0.25rem 0' }}>
+                            Status:
+                          </p>
+                          <p style={{ margin: 0, color: result.leitura.erro === 0 ? '#16a34a' : '#dc2626' }}>
+                            {getErrorMessage(result.leitura.erro)}
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', margin: '0 0 0.25rem 0' }}>
+                            Prova:
+                          </p>
+                          <p style={{ margin: 0, color: 'var(--background)' }}>
+                            {result.leitura.id_prova > 0 ? `Prova ${result.leitura.id_prova}` : 'Não identificada'}
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', margin: '0 0 0.25rem 0' }}>
+                            Participante:
+                          </p>
+                          <p style={{ margin: 0, color: 'var(--background)' }}>
+                            {result.leitura.id_participante > 0 ? `ID: ${result.leitura.id_participante}` : 'Não identificado'}
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', margin: '0 0 0.25rem 0' }}>
+                            Acertos:
+                          </p>
+                          <p style={{ margin: 0, color: 'var(--background)' }}>
+                            {result.leitura.acertos}
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', margin: '0 0 0.25rem 0' }}>
+                            Nota:
+                          </p>
+                          <p style={{ margin: 0, color: 'var(--background)', fontSize: '1.125rem', fontWeight: '600' }}>
+                            {formatNota(result.leitura.nota)}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {result.leitura?.gabarito && (
+                      <div style={{ marginTop: '1rem' }}>
+                        <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', margin: '0 0 0.5rem 0' }}>
+                          Gabarito Lido:
+                        </p>
+                        <div style={{ 
+                          padding: '0.75rem', 
+                          backgroundColor: 'white', 
+                          borderRadius: '0.5rem',
+                          border: '1px solid #d1d5db',
+                        }}>
+                          <GabaritoDisplay 
+                            gabarito={result.leitura.gabarito} 
+                            size="medium"
+                          />
+                        </div>
+                      </div>
+                    )}
+                    
+                    {result.leitura?.erro > 0 && (
+                      <div style={{ marginTop: '1rem' }}>
+                        <a 
+                          href={`/dashboard/leituras?edit=${result.leitura.id}`}
+                          className={`${styles.button} ${styles.buttonSecondary}`}
+                          style={{ fontSize: '0.875rem' }}
+                        >
+                          Editar Leitura
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </DashboardLayout>
+    </ProtectedRoute>
+  );
+}
