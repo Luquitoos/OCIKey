@@ -293,9 +293,6 @@ curl http://localhost:3000         # Frontend
 - **Backend**: http://localhost:5000
 
 **⚠️ IMPORTANTE - Configuração do Banco de Dados:**
-O `docker-compose.yml` está configurado para usar o **banco de dados online no Railway** (PostgreSQL em produção). Isso significa que:
-- ✅ **Funciona imediatamente** sem configuração adicional
-- ✅ **Dados reais** já disponíveis para teste
 - ⚠️ **Se quiser usar banco local**, edite as variáveis de ambiente no `docker-compose.yml`
 
 ### 🔧 Execução Local (Desenvolvimento)
@@ -332,8 +329,6 @@ npm run dev          # Inicia frontend em modo desenvolvimento
 - **Backend**: http://localhost:5000
 
 ### ⚠️ IMPORTANTE: Configuração do Banco de Dados
-
-**O sistema já está configurado para usar o banco de produção** (Railway PostgreSQL) que contém dados reais e está funcionando. Você **não precisa** configurar nada adicional.
 
 **Se quiser usar seu próprio banco PostgreSQL local:**
 
@@ -394,17 +389,17 @@ O `docker-compose.yml` configura automaticamente:
 - **Frontend** (Next.js) na porta 3000
 - **Banco de dados** Railway PostgreSQL (online)
 
-#### ⚠️ IMPORTANTE - Banco de Dados Railway
+#### ⚠️ IMPORTANTE - Banco de Dados
 
-**O Docker está configurado para usar banco online no Railway:**
+**O Docker está assim para substituição:**
 ```yaml
 # Configuração atual no docker-compose.yml
 environment:
-  DB_HOST: turntable.proxy.rlwy.net
-  DB_PORT: 24899
-  DB_NAME: railway
-  DB_USER: postgres
-  DB_PASSWORD: CXfxBDYwgCblBScYNBRUcaZzUIhYughi
+  DB_HOST: SUB
+  DB_PORT: SUB
+  DB_NAME: SUB
+  DB_USER: SUB
+  DB_PASSWORD: SUB
 ```
 
 **Para usar banco local PostgreSQL:**
