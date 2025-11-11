@@ -219,6 +219,7 @@ DB_USER=seu_usuario
 DB_PASSWORD=sua_senha
 JWT_SECRET=seu_jwt_secret_muito_seguro
 JWT_EXPIRES_IN=7d
+LD_LIBRARY_PATH=./biblioteca
 ```
 
 #### Frontend (.env)
