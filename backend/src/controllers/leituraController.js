@@ -254,3 +254,38 @@ export const processarMultiplasImagensUpload = async (req, res) => {
         return res.status(500).json({ error: 'Erro interno ao processar múltiplas imagens' });
     }
 }
+
+// Atualizar leitura: trocar participante (e recalcular acertos)
+export const atualizarLeituraParticipante = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { id_participante } = req.body;
+        if (!id || !id_participante) {
+            return res.status(400).json({ error: 'id e id_participante são obrigatórios' });
+        }
+        // Busca leitura original
+        const { rows } = await pool.query('SELECT * FROM leituras WHERE id = $1', [id]);
+        if (!rows.length) return res.status(404).json({ error: 'Leitura não encontrada' });
+        const leitura = rows[0];
+        // Busca id da prova
+        const id_prova = leitura.id_prova;
+
+        // Recalcula acertos/nota se gabarito e id_prova disponíveis
+        let novosAcertos = leitura.acertos;
+        let novaNota = leitura.nota;
+        if (id_prova && leitura.gabarito) {
+            const { acertos, nota } = await Acertos(id_prova, leitura.gabarito);
+            novosAcertos = acertos;
+            novaNota = nota;
+        }
+        // Atualiza leitura
+        const { rows: updateRows } = await pool.query(
+            'UPDATE leituras SET id_participante = $1, acertos = $2, nota = $3 WHERE id = $4 RETURNING *',
+            [id_participante, novosAcertos, novaNota, id]
+        );
+        res.json({ success: true, leitura: updateRows[0] });
+    } catch (error) {
+        console.error('Erro ao atualizar leitura participante:', error);
+        res.status(500).json({ error: 'Erro interno ao atualizar leitura' });
+    }
+};

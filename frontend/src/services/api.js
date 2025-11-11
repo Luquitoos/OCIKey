@@ -281,6 +281,20 @@ class ApiService {
   async checkHealth() {
     return this.request('/health');
   }
+
+  async cadastroRapidoParticipante({ nome, escola, id_prova }) {
+    return this.request('/admin/cadastro-rapido', {
+      method: 'POST',
+      body: JSON.stringify({ nome, escola, id_prova }),
+    });
+  }
+
+  async vincularLeituraParticipante(idLeitura, id_participante) {
+    return this.request(`/leitura/${idLeitura}/participante`, {
+      method: 'PATCH',
+      body: JSON.stringify({ id_participante }),
+    });
+  }
 }
 
 const apiService = new ApiService();

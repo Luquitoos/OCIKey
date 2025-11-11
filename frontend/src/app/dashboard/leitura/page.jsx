@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
 import GabaritoDisplay from '@/components/GabaritoDisplay';
@@ -22,6 +22,10 @@ export default function LeituraPage() {
   const [loading, setLoading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef(null);
+  const [showQuickRegister, setShowQuickRegister] = useState(false);
+  const [quickRegisterIndex, setQuickRegisterIndex] = useState(null);
+  const [quickRegisterForm, setQuickRegisterForm] = useState({ nome: '', escola: '', id_prova: '' });
+  const [provas, setProvas] = useState([]);
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -122,6 +126,54 @@ export default function LeituraPage() {
     } catch (error) {
       console.error('Erro ao excluir leitura:', error);
       alert('Erro ao excluir leitura: ' + error.message);
+    }
+  };
+
+  // Buscar provas ao montar
+  useEffect(() => {
+    (async () => {
+      try {
+        const resp = await apiService.getProvas();
+        setProvas(resp.data?.provas || []);
+      } catch {}
+    })();
+  }, []);
+
+  // Checa automaticamente se existe leitura sem participante identificada e abre o modal
+  useEffect(() => {
+    const idx = results.findIndex(r => r.leitura && (!r.leitura.id_participante || r.leitura.id_participante <= 0));
+    if (idx >= 0) setShowQuickRegister(true), setQuickRegisterIndex(idx);
+  }, [results]);
+
+  const handleQuickRegister = async (e) => {
+    e.preventDefault();
+    if (!quickRegisterForm.nome || !quickRegisterForm.id_prova) return alert('Preencha o nome completo e selecione uma prova');
+    try {
+      // Chama backend para cadastro rápido
+      const resp = await apiService.cadastroRapidoParticipante({
+        nome: quickRegisterForm.nome,
+        escola: quickRegisterForm.escola,
+        id_prova: quickRegisterForm.id_prova
+      });
+      const participante = resp.participante;
+      // Vincula leitura ao participante criado
+      const leituraId = results[quickRegisterIndex].leitura.id;
+      const resp2 = await apiService.vincularLeituraParticipante(leituraId, participante.id);
+      // Atualiza resultado no estado local
+      setResults(prev => {
+        const copia = [...prev];
+        copia[quickRegisterIndex] = {
+          ...prev[quickRegisterIndex],
+          leitura: resp2.leitura
+        };
+        return copia;
+      });
+      setShowQuickRegister(false);
+      setQuickRegisterForm({ nome: '', escola: '', id_prova: '' });
+      setQuickRegisterIndex(null);
+      alert('Participante cadastrado, leitura vinculada e nota recalculada!');
+    } catch (err) {
+      alert('Erro no cadastro rápido/vincular: ' + (err.response?.error || err.message));
     }
   };
 
@@ -407,6 +459,36 @@ export default function LeituraPage() {
             </div>
           )}
         </div>
+
+        {/* MODAL DE CADASTRO RÁPIDO AUTOMÁTICO */}
+        {showQuickRegister && (
+          <div style={{ position: 'fixed', top:0, left:0, right:0, bottom:0, background: 'rgba(0,0,0,0.4)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:100 }}>
+            <div style={{ background:'white', padding:'2rem', borderRadius: '1rem', minWidth:'350px', maxWidth:'90vw' }}>
+              <h2 style={{fontSize:'1.25rem', fontWeight:'bold', marginBottom: '1rem'}}>Cadastro rápido de participante</h2>
+              <form onSubmit={handleQuickRegister}>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Nome completo</label>
+                  <input className={styles.formInput} value={quickRegisterForm.nome} onChange={e => setQuickRegisterForm(f=>({...f,nome:e.target.value}))} required />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Escola</label>
+                  <input className={styles.formInput} value={quickRegisterForm.escola} onChange={e => setQuickRegisterForm(f=>({...f,escola:e.target.value}))} />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Prova feita</label>
+                  <select className={styles.formInput} value={quickRegisterForm.id_prova} onChange={e => setQuickRegisterForm(f=>({...f,id_prova:e.target.value}))} required>
+                    <option value="">Selecione...</option>
+                    {provas.map(p=>(<option key={p.id} value={p.id}>Prova {p.id} - {p.gabarito}</option>))}
+                  </select>
+                </div>
+                <div style={{marginTop:'1.5rem',display:'flex', justifyContent:'flex-end',gap:'1rem'}}>
+                  <button type="button" className={`${styles.button} ${styles.buttonOutline}`} onClick={()=>setShowQuickRegister(false)}>Cancelar</button>
+                  <button type="submit" className={`${styles.button} ${styles.buttonPrimary}`}>Cadastrar e Vincular</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </DashboardLayout>
     </ProtectedRoute>
   );

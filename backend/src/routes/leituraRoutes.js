@@ -3,9 +3,10 @@ import {
     processarLeitura, 
     processarMultiplasLeituras, 
     processarImagemUpload, 
-    processarMultiplasImagensUpload 
+    processarMultiplasImagensUpload,
+    atualizarLeituraParticipante
 } from '../controllers/leituraController.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateToken, requireRole } from '../middleware/auth.js';
 import { uploadSingle, uploadMultiple } from '../middleware/upload.js';
 
 const router = express.Router();
@@ -27,5 +28,7 @@ router.post('/upload', authenticateToken, uploadSingle, processarImagemUpload);
 
 // Upload e processamento de múltiplas imagens
 router.post('/upload-multiplas', authenticateToken, uploadMultiple, processarMultiplasImagensUpload);
+
+router.patch('/:id/participante', authenticateToken, requireRole(['admin']), atualizarLeituraParticipante);
 
 export default router;
